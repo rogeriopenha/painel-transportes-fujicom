@@ -220,7 +220,17 @@ if not creds_json or not sheet_url:
 
 # ─── GEBEX CONFIG ───
 GBEX_FILE_DEFAULT = os.path.join(os.path.dirname(__file__), "..", "Fujicom", "GBEX", "OCOREN_FUJICOM.TXT")
-gebex_file_path = st.sidebar.text_input("📁 Arquivo OCOREN GBEX", value=st.session_state.get("gebex_path", GBEX_FILE_DEFAULT), key="gebex_path_input")
+
+if CLOUD_MODE:
+    uploaded_ocoren = st.sidebar.file_uploader("📁 Arquivo OCOREN GBEX", type="txt", key="ocoren_upload")
+    if uploaded_ocoren is not None:
+        st.session_state.ocoren_content = uploaded_ocoren.getvalue().decode("utf-8")
+        st.session_state.ocoren_filename = uploaded_ocoren.name
+    gebex_file_path = st.session_state.get("ocoren_path", "")
+    if st.session_state.get("ocoren_content"):
+        st.sidebar.success(f"✅ OCOREN carregado: {st.session_state.get('ocoren_filename', '')}")
+else:
+    gebex_file_path = st.sidebar.text_input("📁 Arquivo OCOREN GBEX", value=st.session_state.get("gebex_path", GBEX_FILE_DEFAULT), key="gebex_path_input")
 
 # ─── LOAD PARAMETERS ───
 try:
@@ -282,11 +292,43 @@ df_gb = pd.DataFrame()
 gebex_ocorrencias_raw = []
 gebex_agregadas = []
 
-if os.path.exists(gebex_file_path):
+ocoren_content = st.session_state.get("ocoren_content", "")
+ocoren_path = gebex_file_path if not CLOUD_MODE else ""
+
+if CLOUD_MODE and ocoren_content:
     try:
         from ocorren_parser import OcorrenParser, agregar_ocorrencias
         parser = OcorrenParser()
-        gebex_ocorrencias_raw = parser.parse_file(gebex_file_path)
+        gebex_ocorrencias_raw = parser.parse_text(ocoren_content)
+        gebex_agregadas = agregar_ocorrencias(gebex_ocorrencias_raw)
+
+        ws_gb = ensure_sheet(sheet, "GB-Ocorrencias",
+            ["nf_numero", "status", "ultima_ocorrencia", "data_ocorrencia",
+             "data_emissao", "codigo_ocorrencia", "sequencial", "transportadora",
+             "cnpj_emissor", "serie_nf"])
+        sync_ocorrencias_to_gsheet(gebex_agregadas, ws_gb)
+
+        records = []
+        for a in gebex_agregadas:
+            records.append({
+                "nf_numero": a["nf_numero"],
+                "status": a["status"],
+                "ultimaOcorrencia": a["ultimaOcorrencia"],
+                "dataOcorrencia": a.get("dataOcorrencia_dt"),
+                "emissao": a.get("dataEmissao_dt"),
+                "cidade": "",
+                "uf": "",
+                "destinatario": "",
+                "transportadora": "GEBEX",
+            })
+        df_gb = pd.DataFrame(records)
+    except Exception as e:
+        st.sidebar.warning(f"Erro ao processar GBEX: {e}")
+elif os.path.exists(ocoren_path):
+    try:
+        from ocorren_parser import OcorrenParser, agregar_ocorrencias
+        parser = OcorrenParser()
+        gebex_ocorrencias_raw = parser.parse_file(ocoren_path)
         gebex_agregadas = agregar_ocorrencias(gebex_ocorrencias_raw)
 
         ws_gb = ensure_sheet(sheet, "GB-Ocorrencias",
