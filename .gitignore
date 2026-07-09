@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Service account (sensitive)
+service_account.json
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Utility/test scripts (not part of the app)
+gerar_pdf_evidencia.py
+gerar_pdf_simplificado.py
+atualizar_pdf.py
+extrair_json.py
+criar_planilha.py
+testar_api.py
+
+# Temp files
+*.tmp
+*.bak
