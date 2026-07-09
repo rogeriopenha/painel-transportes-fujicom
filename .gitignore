@@ -23,3 +23,6 @@ testar_api.py
 # Temp files
 *.tmp
 *.bak
+
+# Raw service account key downloads
+chave json portal transporte/
