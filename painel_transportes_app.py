@@ -343,7 +343,8 @@ with k2:
 with k3:
     st.markdown(f"""<div class="kpi-card" style="border-left-color: #27ae60;"><div class="label">✅ Entregues</div><div class="value">{entregues}</div><div class="sub">{pct_entregues:.1f}%</div></div>""", unsafe_allow_html=True)
 with k4:
-    st.markdown(f"""<div class="kpi-card" style="border-left-color: #f39c12;"><div class="label">⏳ Pendentes / Atrasados</div><div class="value">{pendentes}</div><div class="sub">{pendentes/total_conhecimentos*100:.1f}%</div></div>""", unsafe_allow_html=True)
+    pct_pendentes = pendentes / total_conhecimentos * 100 if total_conhecimentos > 0 else 0
+    st.markdown(f"""<div class="kpi-card" style="border-left-color: #f39c12;"><div class="label">⏳ Pendentes / Atrasados</div><div class="value">{pendentes}</div><div class="sub">{pct_pendentes:.1f}%</div></div>""", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
