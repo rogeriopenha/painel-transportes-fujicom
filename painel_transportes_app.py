@@ -354,6 +354,30 @@ elif os.path.exists(ocoren_path):
     except Exception as e:
         st.sidebar.warning(f"Erro ao processar GBEX: {e}")
 
+# Se não carregou do OCOREN, tenta ler dados existentes da planilha
+if df_gb.empty:
+    try:
+        ws_gb = ensure_sheet(sheet, "GB-Ocorrencias",
+            ["nf_numero", "status", "ultima_ocorrencia", "data_ocorrencia",
+             "data_emissao", "codigo_ocorrencia", "sequencial", "transportadora",
+             "cnpj_emissor", "serie_nf"])
+        df_gb_sheet = df_from_ws(ws_gb)
+        if not df_gb_sheet.empty:
+            df_gb = df_gb_sheet.rename(columns={
+                "ultima_ocorrencia": "ultimaOcorrencia",
+                "data_ocorrencia": "dataOcorrencia",
+                "data_emissao": "emissao",
+            })
+            df_gb["transportadora"] = "GEBEX"
+            df_gb["cidade"] = ""
+            df_gb["uf"] = ""
+            df_gb["destinatario"] = ""
+            for col in ["dataOcorrencia", "emissao"]:
+                if col in df_gb.columns:
+                    df_gb[col] = df_gb[col].apply(parse_date_br)
+    except Exception:
+        pass
+
 gb_entregues = len(df_gb[df_gb["status"].str.lower().str.contains("entreg", na=False)]) if not df_gb.empty else 0
 gb_transito = len(df_gb[df_gb["status"].str.lower().str.contains("trânsito|transito", na=False)]) if not df_gb.empty else 0
 
