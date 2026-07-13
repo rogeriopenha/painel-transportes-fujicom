@@ -311,26 +311,63 @@ def processar_arquivo_ocorren(filepath: str, destino_mover: str = None) -> Optio
 
 
 def sync_ocorrencias_to_gsheet(ocorrencias: list[dict], ws) -> int:
-    import pandas as pd
     headers = ["nf_numero", "status", "ultima_ocorrencia", "data_ocorrencia",
                "data_emissao", "codigo_ocorrencia", "sequencial", "transportadora",
                "cnpj_emissor", "serie_nf"]
-    rows = []
+
+    new_rows = []
     for occ in ocorrencias:
-        rows.append([
-            occ.get("nf_numero", ""),
-            occ.get("status", ""),
-            occ.get("ultimaOcorrencia", ""),
+        new_rows.append([
+            str(occ.get("nf_numero", "")),
+            str(occ.get("status", "")),
+            str(occ.get("ultimaOcorrencia", "")),
             str(occ.get("dataOcorrencia_dt") or occ.get("dataOcorrencia", "")),
             str(occ.get("dataEmissao_dt") or occ.get("dataEmissao", "")),
-            occ.get("codigo_ocorrencia", ""),
-            occ.get("sequencial", ""),
-            occ.get("transportadora", ""),
-            occ.get("cnpj_emissor", ""),
-            occ.get("serie_nf", ""),
+            str(occ.get("codigo_ocorrencia", "")),
+            str(occ.get("sequencial", "")),
+            str(occ.get("transportadora", "")),
+            str(occ.get("cnpj_emissor", "")),
+            str(occ.get("serie_nf", "")),
         ])
-    ws.clear()
-    ws.append_row(headers)
-    for row in rows:
-        ws.append_row(row)
-    return len(rows)
+
+    # Read existing data from sheet
+    existing = ws.get_all_values()
+    has_header = existing and existing[0] == headers
+
+    if has_header and len(existing) > 1:
+        # Build lookup by nf_numero (col 0), keep existing rows
+        data_rows = existing[1:]  # skip header
+        nf_index = {}
+        for i, row in enumerate(data_rows):
+            nf = row[0].strip() if row else ""
+            if nf:
+                nf_index[nf] = i
+
+        updated_count = 0
+        appended_count = 0
+
+        for new_row in new_rows:
+            nf = new_row[0].strip()
+            if nf in nf_index:
+                idx = nf_index[nf] + 2  # +2 because data_rows is 0-based + header at row 1
+                for col_idx, val in enumerate(new_row):
+                    ws.update_cell(idx, col_idx + 1, val)
+                # Update the in-memory copy so subsequent lookups see the new data
+                data_rows[nf_index[nf]] = new_row
+                nf_index[nf] = nf_index[nf]  # stays same
+                updated_count += 1
+            else:
+                ws.append_row(new_row)
+                data_rows.append(new_row)
+                if nf:
+                    nf_index[nf] = len(data_rows) - 1
+                appended_count += 1
+
+        return updated_count + appended_count
+    else:
+        # No existing data, full write
+        ws.clear()
+        ws.append_row(headers)
+        for row in new_rows:
+            ws.append_row(row)
+        return len(new_rows)
