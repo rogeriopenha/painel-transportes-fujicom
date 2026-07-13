@@ -116,6 +116,24 @@ st.sidebar.markdown("---")
 SHEET_URL_DEFAULT = "https://docs.google.com/spreadsheets/d/1-pWMmfKCr3k4cl50mxyhp08C6qDZSTFlddmJYUpS3CU/edit?gid=0#gid=0"
 SA_PATH_DEFAULT = os.path.join(os.path.dirname(__file__), "service_account.json")
 
+GCP_JSON_SECRET = st.secrets.get("gcp_service_account") or st.secrets.get("gcp_service_account_json")
+SHEET_URL_SECRET = st.secrets.get("sheet_url")
+CLOUD_MODE = bool(GCP_JSON_SECRET and SHEET_URL_SECRET)
+
+if CLOUD_MODE:
+    st.sidebar.success("☁️ Modo nuvem")
+
+# Auto-detect local service_account.json
+sa_auto = None
+if os.path.exists(SA_PATH_DEFAULT):
+    with open(SA_PATH_DEFAULT, "r", encoding="utf-8") as f:
+        sa_auto = f.read()
+
+if "gs_creds" not in st.session_state:
+    if sa_auto and SHEET_URL_DEFAULT:
+        st.session_state.gs_creds = sa_auto
+        st.session_state.gs_url = SHEET_URL_DEFAULT
+
 # ─── HELPERS ───
 def gsheet_connect(creds_dict, sheet_url):
     import gspread
@@ -169,26 +187,19 @@ def status_color(s):
         return "#f39c12"
     return "#8899b8"
 
-# ─── LOAD / CONNECT (automático, sem interação do usuário) ───
+# ─── LOAD / CONNECT ───
 creds_json = None
 sheet_url = None
 
-# 1. Tenta secrets do Streamlit Cloud
-gcp_secret = st.secrets.get("gcp_service_account") or st.secrets.get("gcp_service_account_json")
-url_secret = st.secrets.get("sheet_url")
-if gcp_secret and url_secret:
-    creds_json = json.dumps(gcp_secret) if not isinstance(gcp_secret, str) else gcp_secret
-    sheet_url = url_secret
-    st.sidebar.success("☁️ Conectado via Streamlit Secrets")
-# 2. Tenta service_account.json local
-elif os.path.exists(SA_PATH_DEFAULT):
-    with open(SA_PATH_DEFAULT, "r", encoding="utf-8") as f:
-        creds_json = f.read()
-    sheet_url = SHEET_URL_DEFAULT
-    st.sidebar.success("💻 Conectado via service_account.json local")
+if CLOUD_MODE:
+    creds_json = json.dumps(GCP_JSON_SECRET) if not isinstance(GCP_JSON_SECRET, str) else GCP_JSON_SECRET
+    sheet_url = SHEET_URL_SECRET
+elif "gs_creds" in st.session_state and "gs_url" in st.session_state:
+    creds_json = st.session_state.gs_creds
+    sheet_url = st.session_state.gs_url
 
 if not creds_json or not sheet_url:
-    st.error("❌ Planilha não configurada. Configure o service_account.json ou os Secrets do Streamlit Cloud.")
+    st.error("❌ Planilha não configurada. Verifique o service_account.json ou os Secrets do Streamlit Cloud.")
     st.stop()
 
 # ─── GEBEX CONFIG ───
