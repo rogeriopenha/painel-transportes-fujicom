@@ -335,39 +335,28 @@ def sync_ocorrencias_to_gsheet(ocorrencias: list[dict], ws) -> int:
     has_header = existing and existing[0] == headers
 
     if has_header and len(existing) > 1:
-        # Build lookup by nf_numero (col 0), keep existing rows
+        # Build lookup by nf_numero (col 0)
         data_rows = existing[1:]  # skip header
-        nf_index = {}
+        nf_map = {}
         for i, row in enumerate(data_rows):
             nf = row[0].strip() if row else ""
             if nf:
-                nf_index[nf] = i
+                nf_map[nf] = i
 
-        updated_count = 0
-        appended_count = 0
-
+        # Merge: update existing or append new
         for new_row in new_rows:
             nf = new_row[0].strip()
-            if nf in nf_index:
-                idx = nf_index[nf] + 2  # +2 because data_rows is 0-based + header at row 1
-                for col_idx, val in enumerate(new_row):
-                    ws.update_cell(idx, col_idx + 1, val)
-                # Update the in-memory copy so subsequent lookups see the new data
-                data_rows[nf_index[nf]] = new_row
-                nf_index[nf] = nf_index[nf]  # stays same
-                updated_count += 1
+            if nf in nf_map:
+                data_rows[nf_map[nf]] = new_row
             else:
-                ws.append_row(new_row)
                 data_rows.append(new_row)
                 if nf:
-                    nf_index[nf] = len(data_rows) - 1
-                appended_count += 1
-
-        return updated_count + appended_count
+                    nf_map[nf] = len(data_rows) - 1
     else:
-        # No existing data, full write
-        ws.clear()
-        ws.append_row(headers)
-        for row in new_rows:
-            ws.append_row(row)
-        return len(new_rows)
+        data_rows = list(new_rows)
+
+    # Single batch write
+    ws.clear()
+    all_data = [headers] + data_rows
+    ws.update(all_data, value_input_option="USER_ENTERED")
+    return len(data_rows)
