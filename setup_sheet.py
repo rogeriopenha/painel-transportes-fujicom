@@ -45,36 +45,23 @@ br_params = [
 for p in br_params:
     ws_params.append_row(p)
 
-# Gbex section (FTP)
+# GEBEX section
 gb_params = [
     ["ftp_server", "", "Gbex", "ftp", "Servidor FTP GEBEX"],
     ["ftp_user", "", "Gbex", "ftp", "Usuário FTP GEBEX"],
     ["ftp_pass", "", "Gbex", "ftp", "Senha FTP GEBEX"],
-    ["ftp_path", "/", "Gbex", "ftp", "Diretório raiz no FTP"],
-    ["ftp_ocoren_pattern", "OCOREN*.TXT", "Gbex", "ftp", "Padrão do arquivo OCOREN"],
-    ["ftp_conemb_pattern", "CONEMB*.TXT", "Gbex", "ftp", "Padrão do arquivo CONEMB"],
-    ["layout_versao", "5.0", "Gbex", "ftp", "Versão do layout Ocorren/Conemb"],
+    ["ftp_path", "/", "Gbex", "ftp", "Caminho no FTP"],
+    ["layout_versao", "5.0", "Gbex", "ftp", "Versão do layout Ocorren"],
 ]
 for p in gb_params:
     ws_params.append_row(p)
 
-# DHL section (API)
+# DHL section
 dh_params = [
     ["api_key", "", "DHL", "api", "Chave da API DHL"],
     ["api_url", "", "DHL", "api", "URL base da API DHL"],
 ]
 for p in dh_params:
-    ws_params.append_row(p)
-
-# LATAM section (API)
-la_params = [
-    ["cnpj", "", "LATAM", "api", "CNPJ do tomador"],
-    ["usuario", "", "LATAM", "api", "Usuário API LATAM"],
-    ["senha", "", "LATAM", "api", "Senha API LATAM"],
-    ["api_key", "", "LATAM", "api", "Chave da API LATAM"],
-    ["api_url", "", "LATAM", "api", "URL base da API LATAM"],
-]
-for p in la_params:
     ws_params.append_row(p)
 
 # --- Create BR-Conhecimentos ---

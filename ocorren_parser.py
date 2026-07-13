@@ -311,52 +311,26 @@ def processar_arquivo_ocorren(filepath: str, destino_mover: str = None) -> Optio
 
 
 def sync_ocorrencias_to_gsheet(ocorrencias: list[dict], ws) -> int:
+    import pandas as pd
     headers = ["nf_numero", "status", "ultima_ocorrencia", "data_ocorrencia",
                "data_emissao", "codigo_ocorrencia", "sequencial", "transportadora",
                "cnpj_emissor", "serie_nf"]
-
-    new_rows = []
+    rows = []
     for occ in ocorrencias:
-        new_rows.append([
-            str(occ.get("nf_numero", "")),
-            str(occ.get("status", "")),
-            str(occ.get("ultimaOcorrencia", "")),
+        rows.append([
+            occ.get("nf_numero", ""),
+            occ.get("status", ""),
+            occ.get("ultimaOcorrencia", ""),
             str(occ.get("dataOcorrencia_dt") or occ.get("dataOcorrencia", "")),
             str(occ.get("dataEmissao_dt") or occ.get("dataEmissao", "")),
-            str(occ.get("codigo_ocorrencia", "")),
-            str(occ.get("sequencial", "")),
-            str(occ.get("transportadora", "")),
-            str(occ.get("cnpj_emissor", "")),
-            str(occ.get("serie_nf", "")),
+            occ.get("codigo_ocorrencia", ""),
+            occ.get("sequencial", ""),
+            occ.get("transportadora", ""),
+            occ.get("cnpj_emissor", ""),
+            occ.get("serie_nf", ""),
         ])
-
-    # Read existing data from sheet
-    existing = ws.get_all_values()
-    has_header = existing and existing[0] == headers
-
-    if has_header and len(existing) > 1:
-        # Build lookup by nf_numero (col 0)
-        data_rows = existing[1:]  # skip header
-        nf_map = {}
-        for i, row in enumerate(data_rows):
-            nf = row[0].strip() if row else ""
-            if nf:
-                nf_map[nf] = i
-
-        # Merge: update existing or append new
-        for new_row in new_rows:
-            nf = new_row[0].strip()
-            if nf in nf_map:
-                data_rows[nf_map[nf]] = new_row
-            else:
-                data_rows.append(new_row)
-                if nf:
-                    nf_map[nf] = len(data_rows) - 1
-    else:
-        data_rows = list(new_rows)
-
-    # Single batch write
     ws.clear()
-    all_data = [headers] + data_rows
-    ws.update(all_data, value_input_option="USER_ENTERED")
-    return len(data_rows)
+    ws.append_row(headers)
+    for row in rows:
+        ws.append_row(row)
+    return len(rows)
