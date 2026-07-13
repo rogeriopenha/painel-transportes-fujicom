@@ -134,6 +134,14 @@ if "gs_creds" not in st.session_state:
         st.session_state.gs_creds = sa_auto
         st.session_state.gs_url = SHEET_URL_DEFAULT
 
+# Sidebar UI para conexão manual (fallback)
+if not CLOUD_MODE:
+    st.sidebar.markdown("### 🔑 Conexão Google Sheets")
+    default_url = st.session_state.get("gs_url", SHEET_URL_DEFAULT)
+    sheet_url_input = st.sidebar.text_input("URL da Planilha", value=default_url, key="sheet_url_input")
+    json_key = st.sidebar.file_uploader("Service Account JSON", type="json", key="gs_upload")
+    conectar_btn = st.sidebar.button("Conectar", type="primary", key="conectar_btn")
+
 # ─── HELPERS ───
 def gsheet_connect(creds_dict, sheet_url):
     import gspread
@@ -197,6 +205,12 @@ if CLOUD_MODE:
 elif "gs_creds" in st.session_state and "gs_url" in st.session_state:
     creds_json = st.session_state.gs_creds
     sheet_url = st.session_state.gs_url
+elif conectar_btn and json_key and sheet_url_input:
+    creds_json = json_key.read()
+    sheet_url = sheet_url_input
+    st.session_state.gs_creds = creds_json
+    st.session_state.gs_url = sheet_url
+    st.rerun()
 
 if not creds_json or not sheet_url:
     st.error("❌ Planilha não configurada. Verifique o service_account.json ou os Secrets do Streamlit Cloud.")
