@@ -86,7 +86,7 @@ if not st.session_state.auth_email:
         with st.form("login_form"):
             email = st.text_input("Email", placeholder="seu@email.com.br")
             pw = st.text_input("Senha", placeholder="Digite sua senha", type="password")
-            if st.form_submit_button("Entrar", type="primary", use_container_width=True):
+            if st.form_submit_button("Entrar", type="primary", width="stretch"):
                 email_ok = email.strip().lower() in [e.strip().lower() for e in ALLOWED_EMAILS]
                 pw_ok = pw == "fujicom2026"
                 if email_ok and pw_ok:
@@ -103,7 +103,7 @@ if not st.session_state.auth_email:
 try:
     logo = Image.open(logo_path)
     logo = logo.resize((180, int(logo.height * 180 / logo.width)))
-    st.sidebar.image(logo, use_container_width=False)
+    st.sidebar.image(logo)
 except:
     pass
 st.sidebar.markdown("<h2 style='color:#1a5276; margin-bottom:0;'>Painel Transportes</h2><p style='color:#6c757d; font-size:0.85rem; margin-top:0;'>Fujicom</p>", unsafe_allow_html=True)
@@ -426,13 +426,13 @@ with tab_geral:
         nf_busca = st.text_input("Digite o número da NF", placeholder="Ex: 21070", key="nf_busca_geral", label_visibility="collapsed")
         col_nf_b, col_nf_clean = st.columns([1, 1])
         with col_nf_b:
-            busca_nf_click = st.button("Buscar NF", type="primary", use_container_width=True, key="btn_busca_nf")
+            busca_nf_click = st.button("Buscar NF", type="primary", width="stretch", key="btn_busca_nf")
     with sc2:
         st.markdown('<h3 style="color:#e8edf5;">👥 Buscar Cliente</h3>', unsafe_allow_html=True)
         cli_busca = st.text_input("Nome do cliente", placeholder="Ex: COLSAN", key="cli_busca_geral", label_visibility="collapsed")
         col_cli_b, col_cli_periodo = st.columns([1, 1])
         with col_cli_b:
-            busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_busca_cli")
+            busca_cli_click = st.button("Buscar Cliente", type="primary", width="stretch", key="btn_busca_cli")
         with col_cli_periodo:
             period_option = st.selectbox("Período", ["Últimos 30 dias", "Últimos 90 dias", "Últimos 6 meses", "Todo período"], key="periodo_cli")
 
@@ -542,7 +542,7 @@ with tab_geral:
                 df_cli_show.columns = [c.replace("_transportadora","Transp.").replace("nf_numero","NF").replace("numero","CTE").replace("emissao","Emissão").replace("previsaoEntrega","Prev.Entrega").replace("status","Status").replace("cidade","Cidade").replace("uf","UF").replace("destinatario","Cliente").replace("valorMercantil","Valor") for c in existing_display]
                 for c in df_cli_show.select_dtypes(include=["datetime64"]).columns:
                     df_cli_show[c] = df_cli_show[c].dt.strftime("%d/%m/%Y")
-                st.dataframe(df_cli_show, use_container_width=True, hide_index=True, height=400)
+                st.dataframe(df_cli_show, width="stretch", hide_index=True, height=400)
                 st.markdown("</div>", unsafe_allow_html=True)
             else:
                 st.info(f"Nenhum registro de {cli_clean} no período selecionado.")
@@ -618,7 +618,7 @@ with tab_geral:
                     marker=dict(colors=px.colors.sequential.Blues[::-1][:len(sc)]),
                     textinfo="label+percent", textposition="outside", showlegend=False)])
                 fig.update_layout(height=400, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor="white", font=dict(color="#1a1a2e"))
-                st.plotly_chart(fig, use_container_width=True, key="chart_overview_status")
+                st.plotly_chart(fig, width="stretch", key="chart_overview_status")
             st.markdown("</div>", unsafe_allow_html=True)
         with c2:
             st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -634,7 +634,7 @@ with tab_geral:
                 fig.update_layout(height=400, margin=dict(l=10, r=10, t=10, b=10),
                     paper_bgcolor="white", font=dict(color="#1a1a2e"), plot_bgcolor="white",
                     xaxis=dict(visible=False), yaxis=dict(title=None))
-                st.plotly_chart(fig, use_container_width=True, key="chart_overview_carrier")
+                st.plotly_chart(fig, width="stretch", key="chart_overview_carrier")
             st.markdown("</div>", unsafe_allow_html=True)
 
 # ─── TAB: BRASPRESS ───
@@ -646,7 +646,7 @@ with tab_br:
 
     ac1, ac2, ac3 = st.columns([1, 1, 1])
     with ac1:
-        atualizar = st.button("🔄 Atualizar Dados da API", type="primary", use_container_width=True)
+        atualizar = st.button("🔄 Atualizar Dados da API", type="primary", width="stretch")
     with ac2:
         nf_input = st.text_input("Adicionar NF para rastrear", placeholder="Ex: 123456", key="nf_add")
     with ac3:
@@ -765,17 +765,17 @@ with tab_br:
         for c in df_show.select_dtypes(include=["datetime64"]).columns:
             df_show[c] = df_show[c].dt.strftime("%d/%m/%Y")
 
-        st.dataframe(df_show, use_container_width=True, hide_index=True, height=450)
+        st.dataframe(df_show, width="stretch", hide_index=True, height=450)
         st.caption(f"{len(df_disp)} registros")
 
         e1, e2, e3 = st.columns(3)
         csv = df_show.to_csv(index=False).encode("utf-8-sig")
-        e1.download_button("📥 CSV", csv, f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv", "text/csv", use_container_width=True)
+        e1.download_button("📥 CSV", csv, f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv", "text/csv", width="stretch")
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine="openpyxl") as w:
             df_show.to_excel(w, index=False, sheet_name="Braspress")
-        e2.download_button("📥 Excel", output.getvalue(), f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-        e3.download_button("📥 JSON", df_show.to_json(orient="records", force_ascii=False, indent=2).encode("utf-8-sig"), f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "application/json", use_container_width=True)
+        e2.download_button("📥 Excel", output.getvalue(), f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", width="stretch")
+        e3.download_button("📥 JSON", df_show.to_json(orient="records", force_ascii=False, indent=2).encode("utf-8-sig"), f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "application/json", width="stretch")
         st.markdown("</div>", unsafe_allow_html=True)
 
         # KPIs Braspress
@@ -812,7 +812,7 @@ with tab_br:
                 fig.update_layout(height=350, margin=dict(l=10, r=10, t=10, b=10),
                     paper_bgcolor="white", font=dict(color="#1a1a2e"), plot_bgcolor="white",
                     xaxis=dict(title=None), yaxis=dict(title="Qtd"))
-                st.plotly_chart(fig, use_container_width=True, key="chart_br_evolucao")
+                st.plotly_chart(fig, width="stretch", key="chart_br_evolucao")
             st.markdown("</div>", unsafe_allow_html=True)
         with cc2:
             st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -825,7 +825,7 @@ with tab_br:
                 fig.update_layout(height=350, margin=dict(l=10, r=10, t=10, b=10),
                     paper_bgcolor="white", font=dict(color="#1a1a2e"), plot_bgcolor="white",
                     xaxis=dict(visible=False), yaxis=dict(title=None))
-                st.plotly_chart(fig, use_container_width=True, key="chart_br_destinatarios")
+                st.plotly_chart(fig, width="stretch", key="chart_br_destinatarios")
             st.markdown("</div>", unsafe_allow_html=True)
     else:
         st.info("📭 Nenhum dado de rastreamento disponível. Clique em 'Atualizar Dados da API' ou configure NFs/Pedidos.")
@@ -856,7 +856,7 @@ with tab_gb:
         if search_gb:
             mask = df_gb_disp.astype(str).apply(lambda row: row.str.contains(search_gb, case=False, na=False)).any(axis=1)
             df_gb_disp = df_gb_disp[mask]
-        st.dataframe(df_gb_disp, use_container_width=True, hide_index=True, height=350)
+        st.dataframe(df_gb_disp, width="stretch", hide_index=True, height=350)
         st.caption(f"{len(df_gb_disp)} registros")
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -902,7 +902,7 @@ with tab_gb:
                 marker=dict(colors=px.colors.sequential.Blues[::-1][:len(sc_gb)]),
                 textinfo="label+percent", textposition="outside", showlegend=False)])
             fig_gb.update_layout(height=400, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor="white", font=dict(color="#1a1a2e"))
-            st.plotly_chart(fig_gb, use_container_width=True, key="chart_gb_status")
+            st.plotly_chart(fig_gb, width="stretch", key="chart_gb_status")
 
         st.markdown("</div>", unsafe_allow_html=True)
     else:
@@ -998,16 +998,16 @@ with tab_export:
                 df_ed = df_ed[mask]
             for c in df_ed.select_dtypes(include=["datetime64"]).columns:
                 df_ed[c] = df_ed[c].dt.strftime("%d/%m/%Y")
-            st.dataframe(df_ed, use_container_width=True, hide_index=True, height=450)
+            st.dataframe(df_ed, width="stretch", hide_index=True, height=450)
 
             ex1, ex2, ex3 = st.columns(3)
             csv_ed = df_ed.to_csv(index=False).encode("utf-8-sig")
-            ex1.download_button("📥 CSV", csv_ed, f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv", "text/csv", key="dl_br_csv", use_container_width=True)
+            ex1.download_button("📥 CSV", csv_ed, f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv", "text/csv", key="dl_br_csv", width="stretch")
             output_ed = io.BytesIO()
             with pd.ExcelWriter(output_ed, engine="openpyxl") as w:
                 df_ed.to_excel(w, index=False, sheet_name="Braspress")
-            ex2.download_button("📥 Excel", output_ed.getvalue(), f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="dl_br_xlsx", use_container_width=True)
-            ex3.download_button("📥 JSON", df_ed.to_json(orient="records", force_ascii=False, indent=2).encode("utf-8-sig"), f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "application/json", key="dl_br_json", use_container_width=True)
+            ex2.download_button("📥 Excel", output_ed.getvalue(), f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="dl_br_xlsx", width="stretch")
+            ex3.download_button("📥 JSON", df_ed.to_json(orient="records", force_ascii=False, indent=2).encode("utf-8-sig"), f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "application/json", key="dl_br_json", width="stretch")
         else:
             st.info("Nenhum dado disponível.")
     with ed_tabs[1]:
@@ -1022,15 +1022,15 @@ with tab_export:
             if search_ed_gb:
                 mask = df_ed_gb.astype(str).apply(lambda row: row.str.contains(search_ed_gb, case=False, na=False)).any(axis=1)
                 df_ed_gb = df_ed_gb[mask]
-            st.dataframe(df_ed_gb, use_container_width=True, hide_index=True, height=450)
+            st.dataframe(df_ed_gb, width="stretch", hide_index=True, height=450)
             egx1, egx2, egx3 = st.columns(3)
             csv_ed_gb = df_ed_gb.to_csv(index=False).encode("utf-8-sig")
-            egx1.download_button("📥 CSV", csv_ed_gb, f"gebex_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv", "text/csv", key="dl_gb_csv", use_container_width=True)
+            egx1.download_button("📥 CSV", csv_ed_gb, f"gebex_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv", "text/csv", key="dl_gb_csv", width="stretch")
             output_ed_gb = io.BytesIO()
             with pd.ExcelWriter(output_ed_gb, engine="openpyxl") as w:
                 df_ed_gb.to_excel(w, index=False, sheet_name="GEBEX")
-            egx2.download_button("📥 Excel", output_ed_gb.getvalue(), f"gebex_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="dl_gb_xlsx", use_container_width=True)
-            egx3.download_button("📥 JSON", df_ed_gb.to_json(orient="records", force_ascii=False, indent=2).encode("utf-8-sig"), f"gebex_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "application/json", key="dl_gb_json", use_container_width=True)
+            egx2.download_button("📥 Excel", output_ed_gb.getvalue(), f"gebex_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="dl_gb_xlsx", width="stretch")
+            egx3.download_button("📥 JSON", df_ed_gb.to_json(orient="records", force_ascii=False, indent=2).encode("utf-8-sig"), f"gebex_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "application/json", key="dl_gb_json", width="stretch")
         else:
             st.info("📦 GEBEX - Aguardando dados do arquivo OCOREN.")
     with ed_tabs[2]:
