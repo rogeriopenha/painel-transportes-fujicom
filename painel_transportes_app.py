@@ -1000,14 +1000,14 @@ with tab_export:
                 df_ed[c] = df_ed[c].dt.strftime("%d/%m/%Y")
             st.dataframe(df_ed, use_container_width=True, hide_index=True, height=450)
 
-            e1, e2, e3 = st.columns(3)
+            ex1, ex2, ex3 = st.columns(3)
             csv_ed = df_ed.to_csv(index=False).encode("utf-8-sig")
-            e1.download_button("📥 CSV", csv_ed, f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv", "text/csv", use_container_width=True)
+            ex1.download_button("📥 CSV", csv_ed, f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv", "text/csv", key="dl_br_csv", use_container_width=True)
             output_ed = io.BytesIO()
             with pd.ExcelWriter(output_ed, engine="openpyxl") as w:
                 df_ed.to_excel(w, index=False, sheet_name="Braspress")
-            e2.download_button("📥 Excel", output_ed.getvalue(), f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-            e3.download_button("📥 JSON", df_ed.to_json(orient="records", force_ascii=False, indent=2).encode("utf-8-sig"), f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "application/json", use_container_width=True)
+            ex2.download_button("📥 Excel", output_ed.getvalue(), f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="dl_br_xlsx", use_container_width=True)
+            ex3.download_button("📥 JSON", df_ed.to_json(orient="records", force_ascii=False, indent=2).encode("utf-8-sig"), f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "application/json", key="dl_br_json", use_container_width=True)
         else:
             st.info("Nenhum dado disponível.")
     with ed_tabs[1]:
@@ -1023,14 +1023,14 @@ with tab_export:
                 mask = df_ed_gb.astype(str).apply(lambda row: row.str.contains(search_ed_gb, case=False, na=False)).any(axis=1)
                 df_ed_gb = df_ed_gb[mask]
             st.dataframe(df_ed_gb, use_container_width=True, hide_index=True, height=450)
-            eg1, eg2, eg3 = st.columns(3)
+            egx1, egx2, egx3 = st.columns(3)
             csv_ed_gb = df_ed_gb.to_csv(index=False).encode("utf-8-sig")
-            eg1.download_button("📥 CSV", csv_ed_gb, f"gebex_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv", "text/csv", use_container_width=True)
+            egx1.download_button("📥 CSV", csv_ed_gb, f"gebex_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv", "text/csv", key="dl_gb_csv", use_container_width=True)
             output_ed_gb = io.BytesIO()
             with pd.ExcelWriter(output_ed_gb, engine="openpyxl") as w:
                 df_ed_gb.to_excel(w, index=False, sheet_name="GEBEX")
-            eg2.download_button("📥 Excel", output_ed_gb.getvalue(), f"gebex_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
-            eg3.download_button("📥 JSON", df_ed_gb.to_json(orient="records", force_ascii=False, indent=2).encode("utf-8-sig"), f"gebex_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "application/json", use_container_width=True)
+            egx2.download_button("📥 Excel", output_ed_gb.getvalue(), f"gebex_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", key="dl_gb_xlsx", use_container_width=True)
+            egx3.download_button("📥 JSON", df_ed_gb.to_json(orient="records", force_ascii=False, indent=2).encode("utf-8-sig"), f"gebex_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "application/json", key="dl_gb_json", use_container_width=True)
         else:
             st.info("📦 GEBEX - Aguardando dados do arquivo OCOREN.")
     with ed_tabs[2]:

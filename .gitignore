@@ -24,5 +24,8 @@ testar_api.py
 *.tmp
 *.bak
 
+# Runtime logs
+scheduler.log
+
 # Raw service account key downloads
 chave json portal transporte/

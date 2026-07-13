@@ -6,6 +6,7 @@ from typing import Optional
 
 class BraspressAPI:
     BASE_URL = "https://api.braspress.com"
+    USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 
     def __init__(self, cnpj: str, usuario: str, senha: str):
         self.cnpj = cnpj
@@ -18,7 +19,7 @@ class BraspressAPI:
         if not self._auth_header:
             raw = f"{self.usuario}:{self.senha}"
             encoded = base64.b64encode(raw.encode("utf-8")).decode("utf-8")
-            self._auth_header = {"Authorization": f"Basic {encoded}"}
+            self._auth_header = {"Authorization": f"Basic {encoded}", "User-Agent": self.USER_AGENT}
         return self._auth_header
 
     def tracking_by_nf(self, nota_fiscal: str, versao: int = 3) -> Optional[dict]:
