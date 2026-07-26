@@ -720,7 +720,8 @@ with tab_br:
                 ws_br.clear()
                 ws_br.append_row(cabecalhos)
                 for _, row in df_novo.iterrows():
-                    ws_br.append_row(row.astype(str).tolist())
+                    values = ["" if pd.isna(v) else str(v) for v in row.tolist()]
+                    ws_br.append_row(values)
 
                 df_br = df_novo
                 st.success(f"✅ {len(todos)} conhecimentos atualizados!")
