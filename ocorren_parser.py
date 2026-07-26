@@ -329,8 +329,25 @@ def sync_ocorrencias_to_gsheet(ocorrencias: list[dict], ws) -> int:
             occ.get("cnpj_emissor", ""),
             occ.get("serie_nf", ""),
         ])
+
+    raw = ws.get_all_values()
+    if raw and len(raw) > 1:
+        df_existing = pd.DataFrame(raw[1:], columns=raw[0])
+    else:
+        df_existing = pd.DataFrame(columns=headers)
+
+    df_new = pd.DataFrame(rows, columns=headers)
+    merge_key = "nf_numero"
+    df_new[merge_key] = df_new[merge_key].astype(str)
+    df_existing[merge_key] = df_existing[merge_key].astype(str)
+    existing_keys = set(df_existing[merge_key].tolist())
+    df_new_only = df_new[~df_new[merge_key].isin(existing_keys)]
+    df_updated = df_new[df_new[merge_key].isin(existing_keys)]
+    df_preserved = df_existing[~df_existing[merge_key].isin(df_updated[merge_key])]
+    df_merged = pd.concat([df_preserved, df_updated, df_new_only], ignore_index=True)
+
     ws.clear()
     ws.append_row(headers)
-    for row in rows:
-        ws.append_row(row)
+    for _, row in df_merged.iterrows():
+        ws.append_row(["" if pd.isna(v) else str(v) for v in row.tolist()])
     return len(rows)

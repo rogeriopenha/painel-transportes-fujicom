@@ -1,4 +1,5 @@
 import os, sys, json, re, time, logging
+import pandas as pd
 from datetime import datetime
 
 logging.basicConfig(
@@ -121,11 +122,27 @@ def update_braspress():
         "data_consulta",
     ]
 
-    # Clear and rewrite
+    # Upsert: merge new data with existing sheet data
+    raw = ws_br.get_all_values()
+    if raw and len(raw) > 1:
+        df_existing = pd.DataFrame(raw[1:], columns=raw[0])
+    else:
+        df_existing = pd.DataFrame(columns=cabecalhos)
+
+    df_new = pd.DataFrame(todos)
+    merge_key = "numero"
+    df_new[merge_key] = df_new[merge_key].astype(str)
+    df_existing[merge_key] = df_existing[merge_key].astype(str)
+    existing_keys = set(df_existing[merge_key].tolist())
+    df_new_only = df_new[~df_new[merge_key].isin(existing_keys)]
+    df_updated = df_new[df_new[merge_key].isin(existing_keys)]
+    df_preserved = df_existing[~df_existing[merge_key].isin(df_updated[merge_key])]
+    df_merged = pd.concat([df_preserved, df_updated, df_new_only], ignore_index=True)
+
     ws_br.clear()
     ws_br.append_row(cabecalhos)
-    for row_data in todos:
-        ws_br.append_row([str(v) if v is not None else "" for v in row_data.values()])
+    for _, row in df_merged.iterrows():
+        ws_br.append_row(["" if pd.isna(v) else str(v) for v in row.tolist()])
 
     logging.info(f"Atualizados {len(todos)} conhecimentos em BR-Conhecimentos")
 
