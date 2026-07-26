@@ -652,6 +652,31 @@ with tab_br:
     with ac3:
         pedido_input = st.text_input("Adicionar Pedido", placeholder="Ex: 12345", key="pedido_add")
 
+    with st.expander("📋 Adicionar múltiplas NFs de uma vez", expanded=False):
+        nf_bulk = st.text_area(
+            "Cole as NFs separadas por vírgula, ponto-e-vírgula ou quebra de linha",
+            placeholder="Ex: 21136, 21200, 21350\nou\n21136\n21200\n21350",
+            key="nf_bulk_input", height=120
+        )
+        if st.button("➕ Adicionar todas as NFs", type="primary", key="btn_bulk_nfs"):
+            import re
+            nf_list = re.split(r'[,\n;\s]+', nf_bulk)
+            nf_list = [n.strip() for n in nf_list if n.strip() and n.strip().isdigit()]
+            if nf_list:
+                current_nfs = param_map.get("Braspress|nfs", "")
+                existing = [n.strip() for n in current_nfs.split(",") if n.strip()] if current_nfs else []
+                new_nfs_list = existing + [n for n in nf_list if n not in existing]
+                new_nfs = ",".join(new_nfs_list)
+                for i, row in enumerate(df_params.itertuples(), start=2):
+                    if str(row[1]).strip() == "nfs" and str(row[3]).strip() == "Braspress":
+                        ws_params.update_cell(i, 2, new_nfs)
+                        break
+                added = len([n for n in nf_list if n not in existing])
+                st.success(f"✅ {added} NFs adicionadas ({len(existing)} já existentes ignoradas)")
+                st.rerun()
+            else:
+                st.warning("Nenhuma NF válida encontrada no texto.")
+
     if nf_input:
         nf_clean = nf_input.strip()
         if nf_clean and nf_clean not in BR_NFS:
