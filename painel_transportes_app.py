@@ -213,7 +213,8 @@ elif conectar_btn and json_key and sheet_url_input:
     st.rerun()
 
 if not creds_json or not sheet_url:
-    st.error("❌ Planilha não configurada. Verifique o service_account.json ou os Secrets do Streamlit Cloud.")
+    st.error("❌ Planilha não configurada. Verifique os Secrets no dashboard do Streamlit Cloud.")
+    st.caption("Secret necessario: `gcp_service_account` (JSON da service account) e `sheet_url` (URL da planilha).")
     st.stop()
 
 # ─── GEBEX CONFIG ───
