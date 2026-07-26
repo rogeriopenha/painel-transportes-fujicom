@@ -742,15 +742,31 @@ with tab_br:
                     "status", "cidade", "uf", "cidadeColeta", "ufColeta", "dataOcorrencia", "ultimaOcorrencia",
                     "nf_serie", "nf_numero", "nf_emissao", "ultimo_status", "ultimo_status_data", "data_consulta"]
 
-                # Clear and rewrite
+                # Upsert: merge new API data with existing sheet data
+                df_existing = df_br.copy() if not df_br.empty else pd.DataFrame(columns=cabecalhos)
+                merge_key = "numero"
+                if not df_existing.empty and merge_key in df_existing.columns and merge_key in df_novo.columns:
+                    df_novo[merge_key] = df_novo[merge_key].astype(str)
+                    df_existing[merge_key] = df_existing[merge_key].astype(str)
+                    existing_keys = set(df_existing[merge_key].tolist())
+                    df_new_only = df_novo[~df_novo[merge_key].isin(existing_keys)]
+                    df_updated = df_novo[df_novo[merge_key].isin(existing_keys)]
+                    df_preserved = df_existing[~df_existing[merge_key].isin(df_updated[merge_key])]
+                    df_merged = pd.concat([df_preserved, df_updated, df_new_only], ignore_index=True)
+                else:
+                    df_merged = df_novo
+
                 ws_br.clear()
                 ws_br.append_row(cabecalhos)
-                for _, row in df_novo.iterrows():
+                for _, row in df_merged.iterrows():
                     values = ["" if pd.isna(v) else str(v) for v in row.tolist()]
                     ws_br.append_row(values)
 
-                df_br = df_novo
-                st.success(f"✅ {len(todos)} conhecimentos atualizados!")
+                df_br = df_merged
+                if not df_existing.empty:
+                    st.success(f"✅ {len(todos)} consultados | {len(df_updated)} atualizados | {len(df_new_only)} novos | {len(df_merged)} total na planilha")
+                else:
+                    st.success(f"✅ {len(todos)} conhecimentos salvos pela primeira vez!")
                 st.rerun()
             else:
                 st.warning("Nenhum dado retornado da API.")
