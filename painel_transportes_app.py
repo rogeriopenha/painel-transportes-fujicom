@@ -758,9 +758,9 @@ with tab_br:
 
                 ws_br.clear()
                 ws_br.append_row(cabecalhos)
-                for _, row in df_merged.iterrows():
-                    values = ["" if pd.isna(v) else str(v) for v in row.tolist()]
-                    ws_br.append_row(values)
+                all_rows = [["" if pd.isna(v) else str(v) for v in row.tolist()] for _, row in df_merged.iterrows()]
+                for i in range(0, len(all_rows), 100):
+                    ws_br.append_rows(all_rows[i:i+100])
 
                 df_br = df_merged
                 if not df_existing.empty:

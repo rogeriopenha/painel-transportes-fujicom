@@ -66,8 +66,8 @@ def sync_dataframe_to_sheet(ws, df: pd.DataFrame, cabecalhos: list[str], merge_k
         ws.append_row(cabecalhos)
         return
     data = [cabecalhos] + df_merged.astype(str).values.tolist()
-    for row in data:
-        ws.append_row(row)
+    for i in range(0, len(data), 100):
+        ws.append_rows(data[i:i+100])
 
 def obter_aba(sheet, nome: str):
     try:
@@ -79,8 +79,8 @@ def get_sheet_names(sheet):
     return [ws.title for ws in sheet.worksheets()]
 
 def append_rows(ws, rows: list[list]):
-    for row in rows:
-        ws.append_row(row)
+    for i in range(0, len(rows), 100):
+        ws.append_rows(rows[i:i+100])
 
 def update_cell(ws, row: int, col: int, value):
     ws.update_cell(row, col, str(value))

@@ -348,6 +348,7 @@ def sync_ocorrencias_to_gsheet(ocorrencias: list[dict], ws) -> int:
 
     ws.clear()
     ws.append_row(headers)
-    for _, row in df_merged.iterrows():
-        ws.append_row(["" if pd.isna(v) else str(v) for v in row.tolist()])
+    all_rows = [["" if pd.isna(v) else str(v) for v in row.tolist()] for _, row in df_merged.iterrows()]
+    for i in range(0, len(all_rows), 100):
+        ws.append_rows(all_rows[i:i+100])
     return len(rows)

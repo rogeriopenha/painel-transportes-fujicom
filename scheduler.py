@@ -141,8 +141,9 @@ def update_braspress():
 
     ws_br.clear()
     ws_br.append_row(cabecalhos)
-    for _, row in df_merged.iterrows():
-        ws_br.append_row(["" if pd.isna(v) else str(v) for v in row.tolist()])
+    all_rows = [["" if pd.isna(v) else str(v) for v in row.tolist()] for _, row in df_merged.iterrows()]
+    for i in range(0, len(all_rows), 100):
+        ws_br.append_rows(all_rows[i:i+100])
 
     logging.info(f"Atualizados {len(todos)} conhecimentos em BR-Conhecimentos")
 
