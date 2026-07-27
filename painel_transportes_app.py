@@ -965,9 +965,17 @@ with tab_br:
             br_status_opts = sorted(df_br["status"].dropna().unique()) if "status" in df_br.columns else []
             br_status_filter = st.multiselect("📌 Status", br_status_opts, default=br_status_opts, key="br_status_filter")
         br_r2c1, br_r2c2, br_r2c3 = st.columns([1, 1, 1])
+        with br_r2c1:
+            br_busca_nf_click = st.button("Buscar NF", type="primary", use_container_width=True, key="btn_br_busca_nf")
+        with br_r2c2:
+            br_sub1, br_sub2 = st.columns([1, 1])
+            with br_sub1:
+                br_busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_br_busca_cli")
+            with br_sub2:
+                br_period_option = st.selectbox("Período", ["Últimos 30 dias", "Últimos 90 dias", "Últimos 6 meses", "Todo período"], key="br_periodo_cli", label_visibility="collapsed")
         with br_r2c3:
             if st.button("🗑️ Limpar", key="btn_br_clear", use_container_width=True):
-                for k in ["br_nf_busca", "br_cli_busca", "br_status_filter"]:
+                for k in ["br_nf_busca", "br_cli_busca", "br_status_filter", "br_periodo_cli"]:
                     if k in st.session_state:
                         del st.session_state[k]
                 st.rerun()
@@ -981,6 +989,18 @@ with tab_br:
         if br_cli_busca:
             mask = df_disp.astype(str).apply(lambda row: row.str.contains(br_cli_busca, case=False, na=False)).any(axis=1)
             df_disp = df_disp[mask]
+        if br_period_option != "Todo período" and "emissao" in df_disp.columns:
+            if br_period_option == "Últimos 30 dias":
+                cutoff = datetime.now() - timedelta(days=30)
+            elif br_period_option == "Últimos 90 dias":
+                cutoff = datetime.now() - timedelta(days=90)
+            elif br_period_option == "Últimos 6 meses":
+                cutoff = datetime.now() - timedelta(days=180)
+            else:
+                cutoff = None
+            if cutoff:
+                df_disp["_dt"] = pd.to_datetime(df_disp["emissao"], errors="coerce", dayfirst=True)
+                df_disp = df_disp[df_disp["_dt"] >= cutoff]
 
         # Date formatting
         df_show = df_disp.copy()
@@ -1104,19 +1124,21 @@ with tab_gb:
             gb_status_opts = sorted(df_gb["status"].dropna().unique()) if "status" in df_gb.columns else []
             gb_status_filter = st.multiselect("📌 Status", gb_status_opts, default=gb_status_opts, key="gb_status_filter")
         gb_r2c1, gb_r2c2, gb_r2c3 = st.columns([1, 1, 1])
+        with gb_r2c1:
+            gb_busca_nf_click = st.button("Buscar NF", type="primary", use_container_width=True, key="btn_gb_busca_nf")
+        with gb_r2c2:
+            gb_sub1, gb_sub2 = st.columns([1, 1])
+            with gb_sub1:
+                gb_busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_gb_busca_cli")
+            with gb_sub2:
+                gb_period_option = st.selectbox("Período", ["Últimos 30 dias", "Últimos 90 dias", "Últimos 6 meses", "Todo período"], key="gb_periodo_cli", label_visibility="collapsed")
         with gb_r2c3:
             if st.button("🗑️ Limpar", key="btn_gb_clear", use_container_width=True):
-                for k in ["gb_nf_busca", "gb_cli_busca", "gb_status_filter"]:
+                for k in ["gb_nf_busca", "gb_cli_busca", "gb_status_filter", "gb_periodo_cli"]:
                     if k in st.session_state:
                         del st.session_state[k]
                 st.rerun()
         df_gb_disp = df_gb.copy()
-        if "dataOcorrencia" in df_gb_disp.columns:
-            df_gb_disp["dataOcorrencia"] = df_gb_disp["dataOcorrencia"].apply(
-                lambda x: str(x)[:10] if pd.notna(x) else "")
-        if "emissao" in df_gb_disp.columns:
-            df_gb_disp["emissao"] = df_gb_disp["emissao"].apply(
-                lambda x: str(x)[:10] if pd.notna(x) else "")
         if gb_status_filter:
             df_gb_disp = df_gb_disp[df_gb_disp["status"].isin(gb_status_filter)]
         if gb_nf_busca:
@@ -1125,6 +1147,24 @@ with tab_gb:
         if gb_cli_busca:
             mask = df_gb_disp.astype(str).apply(lambda row: row.str.contains(gb_cli_busca, case=False, na=False)).any(axis=1)
             df_gb_disp = df_gb_disp[mask]
+        if gb_period_option != "Todo período" and "dataOcorrencia" in df_gb_disp.columns:
+            if gb_period_option == "Últimos 30 dias":
+                cutoff = datetime.now() - timedelta(days=30)
+            elif gb_period_option == "Últimos 90 dias":
+                cutoff = datetime.now() - timedelta(days=90)
+            elif gb_period_option == "Últimos 6 meses":
+                cutoff = datetime.now() - timedelta(days=180)
+            else:
+                cutoff = None
+            if cutoff:
+                df_gb_disp["_dt"] = pd.to_datetime(df_gb_disp["dataOcorrencia"], errors="coerce", dayfirst=True)
+                df_gb_disp = df_gb_disp[df_gb_disp["_dt"] >= cutoff]
+        if "dataOcorrencia" in df_gb_disp.columns:
+            df_gb_disp["dataOcorrencia"] = df_gb_disp["dataOcorrencia"].apply(
+                lambda x: str(x)[:10] if pd.notna(x) else "")
+        if "emissao" in df_gb_disp.columns:
+            df_gb_disp["emissao"] = df_gb_disp["emissao"].apply(
+                lambda x: str(x)[:10] if pd.notna(x) else "")
         st.dataframe(df_gb_disp, use_container_width=True, hide_index=True, height=350)
         st.caption(f"{len(df_gb_disp)} registros")
         st.markdown("</div>", unsafe_allow_html=True)
