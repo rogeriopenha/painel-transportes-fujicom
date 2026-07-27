@@ -109,6 +109,7 @@ st.markdown("""
     ul[role="listbox"] li:hover { background: #253e81 !important; }
     div[data-baseweb="multi-select"] div[aria-expanded="false"] span { color: #ffffff !important; }
     div[data-baseweb="multi-select"] div[aria-expanded="true"] span { color: #ffffff !important; }
+    [data-testid="stWidgetLabel"] { font-size: 1.125rem !important; font-weight: 700 !important; color: #e8edf5 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -455,53 +456,38 @@ def _load_raw_ocorrencias_from_sheet(sheet):
                     pass
     return all_ocorrs
 
+ws_gb = ensure_sheet(sheet, "GB-Ocorrencias",
+    ["nf_numero", "status", "ultima_ocorrencia", "data_ocorrencia",
+     "data_emissao", "codigo_ocorrencia", "sequencial", "transportadora",
+     "cnpj_emissor", "serie_nf"])
+
+df_gb = _load_df_gb_from_sheet(ws_gb)
+gebex_ocorrencias_raw = _load_raw_ocorrencias_from_sheet(sheet)
+
 if CLOUD_MODE and ocoren_content:
     try:
         from ocorren_parser import OcorrenParser, agregar_ocorrencias
         parser = OcorrenParser()
-        gebex_ocorrencias_raw = parser.parse_text(ocoren_content)
-        gebex_agregadas = agregar_ocorrencias(gebex_ocorrencias_raw)
-
-        ws_gb = ensure_sheet(sheet, "GB-Ocorrencias",
-            ["nf_numero", "status", "ultima_ocorrencia", "data_ocorrencia",
-             "data_emissao", "codigo_ocorrencia", "sequencial", "transportadora",
-             "cnpj_emissor", "serie_nf"])
+        gebex_ocorrencias_raw_new = parser.parse_text(ocoren_content)
+        gebex_agregadas = agregar_ocorrencias(gebex_ocorrencias_raw_new)
         sync_ocorrencias_to_gsheet(gebex_agregadas, ws_gb)
-        _sync_raw_ocorrencias(gebex_ocorrencias_raw, sheet)
+        _sync_raw_ocorrencias(gebex_ocorrencias_raw_new, sheet)
         gebex_ocorrencias_raw = _load_raw_ocorrencias_from_sheet(sheet)
-
         df_gb = _load_df_gb_from_sheet(ws_gb)
     except Exception as e:
-        st.sidebar.warning(f"Erro ao processar GBEX: {e}")
+        st.sidebar.warning(f"Erro ao processar OCOREN: {e}")
 elif os.path.exists(ocoren_path):
     try:
         from ocorren_parser import OcorrenParser, agregar_ocorrencias
         parser = OcorrenParser()
-        gebex_ocorrencias_raw = parser.parse_file(ocoren_path)
-        gebex_agregadas = agregar_ocorrencias(gebex_ocorrencias_raw)
-
-        ws_gb = ensure_sheet(sheet, "GB-Ocorrencias",
-            ["nf_numero", "status", "ultima_ocorrencia", "data_ocorrencia",
-             "data_emissao", "codigo_ocorrencia", "sequencial", "transportadora",
-             "cnpj_emissor", "serie_nf"])
+        gebex_ocorrencias_raw_new = parser.parse_file(ocoren_path)
+        gebex_agregadas = agregar_ocorrencias(gebex_ocorrencias_raw_new)
         sync_ocorrencias_to_gsheet(gebex_agregadas, ws_gb)
-        _sync_raw_ocorrencias(gebex_ocorrencias_raw, sheet)
+        _sync_raw_ocorrencias(gebex_ocorrencias_raw_new, sheet)
         gebex_ocorrencias_raw = _load_raw_ocorrencias_from_sheet(sheet)
-
         df_gb = _load_df_gb_from_sheet(ws_gb)
     except Exception as e:
-        st.sidebar.warning(f"Erro ao processar GBEX: {e}")
-
-if df_gb.empty:
-    try:
-        ws_gb = ensure_sheet(sheet, "GB-Ocorrencias",
-            ["nf_numero", "status", "ultima_ocorrencia", "data_ocorrencia",
-             "data_emissao", "codigo_ocorrencia", "sequencial", "transportadora",
-             "cnpj_emissor", "serie_nf"])
-        df_gb = _load_df_gb_from_sheet(ws_gb)
-        gebex_ocorrencias_raw = _load_raw_ocorrencias_from_sheet(sheet)
-    except Exception:
-        pass
+        st.sidebar.warning(f"Erro ao processar OCOREN: {e}")
 
 gb_entregues = len(df_gb[df_gb["status"].str.lower().str.contains("entreg", na=False)]) if not df_gb.empty else 0
 gb_transito = len(df_gb[df_gb["status"].str.lower().str.contains("trânsito|transito", na=False)]) if not df_gb.empty else 0
