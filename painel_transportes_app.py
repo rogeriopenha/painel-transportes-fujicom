@@ -294,6 +294,90 @@ gebex_agregadas = []
 ocoren_content = st.session_state.get("ocoren_content", "")
 ocoren_path = gebex_file_path if not CLOUD_MODE else ""
 
+def _load_df_gb_from_sheet(ws_gb):
+    df_gb_sheet = df_from_ws(ws_gb)
+    if not df_gb_sheet.empty:
+        df_gb = df_gb_sheet.rename(columns={
+            "ultima_ocorrencia": "ultimaOcorrencia",
+            "data_ocorrencia": "dataOcorrencia",
+            "data_emissao": "emissao",
+        })
+        df_gb["transportadora"] = "GEBEX"
+        df_gb["cidade"] = ""
+        df_gb["uf"] = ""
+        df_gb["destinatario"] = ""
+        for col in ["dataOcorrencia", "emissao"]:
+            if col in df_gb.columns:
+                df_gb[col] = df_gb[col].apply(parse_date_br)
+        return df_gb
+    return pd.DataFrame()
+
+def _sync_raw_ocorrencias(ocorrencias_raw, sheet):
+    import json as _json
+    headers_raw = ["nf_numero", "ocorrencias_json"]
+    try:
+        ws_raw = sheet.worksheet("GB-Ocorrencias-Raw")
+    except:
+        ws_raw = sheet.add_worksheet(title="GB-Ocorrencias-Raw", rows=100, cols=2)
+        ws_raw.append_row(headers_raw)
+
+    from collections import defaultdict
+    nfs_raw = defaultdict(list)
+    for o in ocorrencias_raw:
+        nf = o.get("numero_nf", "")
+        if nf:
+            nfs_raw[nf].append({
+                "numero_nf": nf,
+                "cnpj_emissor": o.get("cnpj_emissor", ""),
+                "serie_nf": o.get("serie_nf", ""),
+                "codigo_ocorrencia": o.get("codigo_ocorrencia", 0),
+                "descricao_ocorrencia": o.get("descricao_ocorrencia", ""),
+                "data_ocorrencia": o.get("data_ocorrencia", ""),
+                "sequencial": o.get("sequencial", ""),
+            })
+
+    raw = ws_raw.get_all_values()
+    existing_map = {}
+    if raw and len(raw) > 1:
+        for row in raw[1:]:
+            if row and row[0]:
+                try:
+                    existing_map[row[0]] = _json.loads(row[1]) if row[1] else []
+                except:
+                    existing_map[row[0]] = []
+
+    for nf, new_ocorrs in nfs_raw.items():
+        old_ocorrs = existing_map.get(nf, [])
+        old_seq = {str(o.get("sequencial", "")): o for o in old_ocorrs}
+        for o in new_ocorrs:
+            old_seq[str(o.get("sequencial", ""))] = o
+        merged = sorted(old_seq.values(), key=lambda x: str(x.get("sequencial", "0")))
+        existing_map[nf] = merged
+
+    all_rows_raw = [[nf, _json.dumps(ocorrs, ensure_ascii=False)] for nf, ocorrs in existing_map.items()]
+    ws_raw.clear()
+    ws_raw.append_row(headers_raw)
+    for i in range(0, len(all_rows_raw), 100):
+        ws_raw.append_rows(all_rows_raw[i:i+100])
+
+def _load_raw_ocorrencias_from_sheet(sheet):
+    import json as _json
+    try:
+        ws_raw = sheet.worksheet("GB-Ocorrencias-Raw")
+    except:
+        return []
+    raw = ws_raw.get_all_values()
+    all_ocorrs = []
+    if raw and len(raw) > 1:
+        for row in raw[1:]:
+            if row and row[0] and len(row) > 1 and row[1]:
+                try:
+                    ocorrs = _json.loads(row[1])
+                    all_ocorrs.extend(ocorrs)
+                except:
+                    pass
+    return all_ocorrs
+
 if CLOUD_MODE and ocoren_content:
     try:
         from ocorren_parser import OcorrenParser, agregar_ocorrencias
@@ -306,21 +390,10 @@ if CLOUD_MODE and ocoren_content:
              "data_emissao", "codigo_ocorrencia", "sequencial", "transportadora",
              "cnpj_emissor", "serie_nf"])
         sync_ocorrencias_to_gsheet(gebex_agregadas, ws_gb)
+        _sync_raw_ocorrencias(gebex_ocorrencias_raw, sheet)
+        gebex_ocorrencias_raw = _load_raw_ocorrencias_from_sheet(sheet)
 
-        records = []
-        for a in gebex_agregadas:
-            records.append({
-                "nf_numero": a["nf_numero"],
-                "status": a["status"],
-                "ultimaOcorrencia": a["ultimaOcorrencia"],
-                "dataOcorrencia": a.get("dataOcorrencia_dt"),
-                "emissao": a.get("dataEmissao_dt"),
-                "cidade": "",
-                "uf": "",
-                "destinatario": "",
-                "transportadora": "GEBEX",
-            })
-        df_gb = pd.DataFrame(records)
+        df_gb = _load_df_gb_from_sheet(ws_gb)
     except Exception as e:
         st.sidebar.warning(f"Erro ao processar GBEX: {e}")
 elif os.path.exists(ocoren_path):
@@ -335,45 +408,21 @@ elif os.path.exists(ocoren_path):
              "data_emissao", "codigo_ocorrencia", "sequencial", "transportadora",
              "cnpj_emissor", "serie_nf"])
         sync_ocorrencias_to_gsheet(gebex_agregadas, ws_gb)
+        _sync_raw_ocorrencias(gebex_ocorrencias_raw, sheet)
+        gebex_ocorrencias_raw = _load_raw_ocorrencias_from_sheet(sheet)
 
-        records = []
-        for a in gebex_agregadas:
-            records.append({
-                "nf_numero": a["nf_numero"],
-                "status": a["status"],
-                "ultimaOcorrencia": a["ultimaOcorrencia"],
-                "dataOcorrencia": a.get("dataOcorrencia_dt"),
-                "emissao": a.get("dataEmissao_dt"),
-                "cidade": "",
-                "uf": "",
-                "destinatario": "",
-                "transportadora": "GEBEX",
-            })
-        df_gb = pd.DataFrame(records)
+        df_gb = _load_df_gb_from_sheet(ws_gb)
     except Exception as e:
         st.sidebar.warning(f"Erro ao processar GBEX: {e}")
 
-# Se não carregou do OCOREN, tenta ler dados existentes da planilha
 if df_gb.empty:
     try:
         ws_gb = ensure_sheet(sheet, "GB-Ocorrencias",
             ["nf_numero", "status", "ultima_ocorrencia", "data_ocorrencia",
              "data_emissao", "codigo_ocorrencia", "sequencial", "transportadora",
              "cnpj_emissor", "serie_nf"])
-        df_gb_sheet = df_from_ws(ws_gb)
-        if not df_gb_sheet.empty:
-            df_gb = df_gb_sheet.rename(columns={
-                "ultima_ocorrencia": "ultimaOcorrencia",
-                "data_ocorrencia": "dataOcorrencia",
-                "data_emissao": "emissao",
-            })
-            df_gb["transportadora"] = "GEBEX"
-            df_gb["cidade"] = ""
-            df_gb["uf"] = ""
-            df_gb["destinatario"] = ""
-            for col in ["dataOcorrencia", "emissao"]:
-                if col in df_gb.columns:
-                    df_gb[col] = df_gb[col].apply(parse_date_br)
+        df_gb = _load_df_gb_from_sheet(ws_gb)
+        gebex_ocorrencias_raw = _load_raw_ocorrencias_from_sheet(sheet)
     except Exception:
         pass
 
@@ -618,7 +667,7 @@ with tab_geral:
                 fig = go.Figure(data=[go.Pie(labels=sc.index, values=sc.values, hole=0.55,
                     marker=dict(colors=px.colors.sequential.Blues[::-1][:len(sc)]),
                     textinfo="label+percent", textposition="outside", showlegend=False)])
-                fig.update_layout(height=400, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor="white", font=dict(color="#1a1a2e"))
+                fig.update_layout(height=400, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor="white", font=dict(color="black"), legend=dict(font=dict(color="black")))
                 st.plotly_chart(fig, use_container_width=True, key="chart_overview_status")
             st.markdown("</div>", unsafe_allow_html=True)
         with c2:
@@ -633,8 +682,9 @@ with tab_geral:
                     marker=dict(color=cores, line=dict(width=0)),
                     text=carrier_df["Registros"], textposition="outside"))
                 fig.update_layout(height=400, margin=dict(l=10, r=10, t=10, b=10),
-                    paper_bgcolor="white", font=dict(color="#1a1a2e"), plot_bgcolor="white",
-                    xaxis=dict(visible=False), yaxis=dict(title=None))
+                    paper_bgcolor="white", font=dict(color="black"), plot_bgcolor="white",
+                    legend=dict(font=dict(color="black")),
+                    xaxis=dict(visible=False), yaxis=dict(title=None, tickfont=dict(color="black")))
                 st.plotly_chart(fig, use_container_width=True, key="chart_overview_carrier")
             st.markdown("</div>", unsafe_allow_html=True)
 
@@ -853,8 +903,9 @@ with tab_br:
                     color_discrete_sequence=px.colors.qualitative.Bold,
                     barmode="group")
                 fig.update_layout(height=350, margin=dict(l=10, r=10, t=10, b=10),
-                    paper_bgcolor="white", font=dict(color="#1a1a2e"), plot_bgcolor="white",
-                    xaxis=dict(title=None), yaxis=dict(title="Qtd"))
+                    paper_bgcolor="white", font=dict(color="black"), plot_bgcolor="white",
+                    legend=dict(font=dict(color="black")),
+                    xaxis=dict(title=None, tickfont=dict(color="black")), yaxis=dict(title="Qtd", tickfont=dict(color="black")))
                 st.plotly_chart(fig, use_container_width=True, key="chart_br_evolucao")
             st.markdown("</div>", unsafe_allow_html=True)
         with cc2:
@@ -866,8 +917,9 @@ with tab_br:
                     marker=dict(color=dc.values, colorscale="Blues", line=dict(width=0)),
                     text=dc.values, textposition="outside"))
                 fig.update_layout(height=350, margin=dict(l=10, r=10, t=10, b=10),
-                    paper_bgcolor="white", font=dict(color="#1a1a2e"), plot_bgcolor="white",
-                    xaxis=dict(visible=False), yaxis=dict(title=None))
+                    paper_bgcolor="white", font=dict(color="black"), plot_bgcolor="white",
+                    legend=dict(font=dict(color="black")),
+                    xaxis=dict(visible=False), yaxis=dict(title=None, tickfont=dict(color="black")))
                 st.plotly_chart(fig, use_container_width=True, key="chart_br_destinatarios")
             st.markdown("</div>", unsafe_allow_html=True)
     else:
@@ -944,7 +996,7 @@ with tab_gb:
             fig_gb = go.Figure(data=[go.Pie(labels=sc_gb.index, values=sc_gb.values, hole=0.55,
                 marker=dict(colors=px.colors.sequential.Blues[::-1][:len(sc_gb)]),
                 textinfo="label+percent", textposition="outside", showlegend=False)])
-            fig_gb.update_layout(height=400, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor="white", font=dict(color="#1a1a2e"))
+            fig_gb.update_layout(height=400, margin=dict(l=10, r=10, t=10, b=10), paper_bgcolor="white", font=dict(color="black"), legend=dict(font=dict(color="black")))
             st.plotly_chart(fig_gb, use_container_width=True, key="chart_gb_status")
 
         st.markdown("</div>", unsafe_allow_html=True)
