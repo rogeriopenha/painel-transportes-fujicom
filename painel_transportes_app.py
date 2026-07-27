@@ -50,10 +50,16 @@ st.markdown("""
     section[data-testid="stSidebar"] .stTextInput input { background: #d9e4f4 !important; border-color: #b8c9dd !important; }
     section[data-testid="stSidebar"] [data-baseweb="select"] * { color: #000000 !important; }
     section[data-testid="stSidebar"] .stTextInput input { color: #000000 !important; }
-    div[data-baseweb="multi-select"] span { color: #ffffff !important; }
-    div[data-baseweb="tag"] span { color: #ffffff !important; }
+    div[data-baseweb="multi-select"] span,
+    div[data-baseweb="tag"] span,
+    div[data-baseweb="multi-select"] div[data-baseweb="input"] span { color: #ffffff !important; }
     div[data-baseweb="multi-select"] input::placeholder { color: #aabbcc !important; }
-    div[data-baseweb="multi-select"] div[role="listbox"] li { color: #1a1a2e !important; }
+    div[data-baseweb="select"] span[role="option"] { color: #1a1a2e !important; }
+    ul[role="listbox"] li span { color: #1a1a2e !important; }
+    div[data-baseweb="menu"] li { color: #1a1a2e !important; }
+    div[data-baseweb="menu"] li span { color: #1a1a2e !important; }
+    div[data-baseweb="multi-select"] div[aria-expanded="false"] span { color: #ffffff !important; }
+    div[data-baseweb="multi-select"] div[aria-expanded="true"] span { color: #ffffff !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -492,7 +498,14 @@ tab_geral, tab_br, tab_gb, tab_params, tab_export = tabs
 with tab_geral:
     # --- Search Area ---
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    sc1, sc2, sc3 = st.columns([1, 1, 1])
+    btn_col, sc1, sc2, sc3 = st.columns([0.5, 1, 1, 1])
+    with btn_col:
+        st.markdown('<h3 style="color:#e8edf5;">&nbsp;</h3>', unsafe_allow_html=True)
+        if st.button("🗑️ Limpar", key="btn_clear_filters", use_container_width=True):
+            for k in ["nf_busca_geral", "cli_busca_geral", "status_filter_geral", "periodo_cli"]:
+                if k in st.session_state:
+                    del st.session_state[k]
+            st.rerun()
     with sc1:
         st.markdown('<h3 style="color:#e8edf5;">🔎 Buscar Nota Fiscal</h3>', unsafe_allow_html=True)
         nf_busca = st.text_input("Digite o número da NF", placeholder="Ex: 21070", key="nf_busca_geral", label_visibility="collapsed")
@@ -539,6 +552,11 @@ with tab_geral:
     df_unified = build_unified_data()
     if status_filter and not df_unified.empty and "status" in df_unified.columns:
         df_unified = df_unified[df_unified["status"].isin(status_filter)]
+        df_br_filtered = df_br[df_br["status"].isin(status_filter)] if not df_br.empty and "status" in df_br.columns else df_br
+        df_gb_filtered = df_gb[df_gb["status"].isin(status_filter)] if not df_gb.empty and "status" in df_gb.columns else df_gb
+    else:
+        df_br_filtered = df_br
+        df_gb_filtered = df_gb
     st.markdown("</div>", unsafe_allow_html=True)
 
     # --- NF Panorama ---
@@ -636,6 +654,11 @@ with tab_geral:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown('<h3 style="color:#e8edf5;">Visão Geral por Transportadora</h3>', unsafe_allow_html=True)
 
+    br_ent_f = len(df_br_filtered[df_br_filtered["status"].str.lower().str.contains("entreg", na=False)]) if not df_br_filtered.empty and "status" in df_br_filtered.columns else 0
+    br_trans_f = len(df_br_filtered[df_br_filtered["status"].str.lower().str.contains("trânsito|transito|colet", na=False)]) if not df_br_filtered.empty and "status" in df_br_filtered.columns else 0
+    gb_ent_f = len(df_gb_filtered[df_gb_filtered["status"].str.lower().str.contains("entreg", na=False)]) if not df_gb_filtered.empty and "status" in df_gb_filtered.columns else 0
+    gb_trans_f = len(df_gb_filtered[df_gb_filtered["status"].str.lower().str.contains("trânsito|transito", na=False)]) if not df_gb_filtered.empty and "status" in df_gb_filtered.columns else 0
+
     cc1, cc2, cc3 = st.columns(3)
     with cc1:
         st.markdown("""
@@ -647,9 +670,9 @@ with tab_geral:
             <p class="param">Última consulta: <span>{}</span></p>
         </div>
         """.format(
-            len(df_br),
-            br_entregues,
-            br_transito,
+            len(df_br_filtered),
+            br_ent_f,
+            br_trans_f,
             df_br["data_consulta"].iloc[0] if not df_br.empty and "data_consulta" in df_br.columns else "Nunca"
         ), unsafe_allow_html=True)
     with cc2:
@@ -667,9 +690,9 @@ with tab_geral:
             <p class="param">Última atualização: <span>{}</span></p>
         </div>
         """.format(
-            len(df_gb),
-            gb_entregues,
-            gb_transito,
+            len(df_gb_filtered),
+            gb_ent_f,
+            gb_trans_f,
             data_ultima if data_ultima else "Nunca"
         ), unsafe_allow_html=True)
     with cc3:
@@ -688,11 +711,11 @@ with tab_geral:
             st.markdown('<div class="card">', unsafe_allow_html=True)
             st.markdown('<h3 style="color:#e8edf5;">Status Consolidado</h3>', unsafe_allow_html=True)
             df_status_all = []
-            if not df_br.empty and "status" in df_br.columns:
-                for _, r in df_br.iterrows():
+            if not df_br_filtered.empty and "status" in df_br_filtered.columns:
+                for _, r in df_br_filtered.iterrows():
                     df_status_all.append({"status": r.get("status", "?"), "transportadora": "Braspress"})
-            if not df_gb.empty:
-                for _, r in df_gb.iterrows():
+            if not df_gb_filtered.empty:
+                for _, r in df_gb_filtered.iterrows():
                     df_status_all.append({"status": r.get("status", "?"), "transportadora": "GEBEX"})
             df_status_all = pd.DataFrame(df_status_all)
             if not df_status_all.empty:
@@ -706,7 +729,7 @@ with tab_geral:
         with c2:
             st.markdown('<div class="card">', unsafe_allow_html=True)
             st.markdown('<h3 style="color:#e8edf5;">Registros por Transportadora</h3>', unsafe_allow_html=True)
-            carrier_counts = {"Braspress": len(df_br), "GEBEX": len(df_gb)}
+            carrier_counts = {"Braspress": len(df_br_filtered), "GEBEX": len(df_gb_filtered)}
             carrier_df = pd.DataFrame(list(carrier_counts.items()), columns=["Transportadora", "Registros"])
             carrier_df = carrier_df[carrier_df["Registros"] > 0]
             if not carrier_df.empty:
