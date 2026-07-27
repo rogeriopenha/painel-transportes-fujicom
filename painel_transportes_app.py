@@ -1051,16 +1051,16 @@ with tab_br:
         st.subheader("📊 Métricas Braspress")
         bk1, bk2, bk3, bk4 = st.columns(4)
         with bk1:
-            total_frete = pd.to_numeric(df_br["totalFrete"], errors="coerce").sum() if "totalFrete" in df_br.columns else 0
+            total_frete = pd.to_numeric(df_disp["totalFrete"], errors="coerce").sum() if "totalFrete" in df_disp.columns else 0
             st.markdown(f"""<div class="kpi-card" style="border-left-color: #8e44ad;"><div class="label">💰 Total Frete</div><div class="value">R$ {total_frete:,.2f}</div></div>""", unsafe_allow_html=True)
         with bk2:
-            total_valor = pd.to_numeric(df_br["valorMercantil"], errors="coerce").sum() if "valorMercantil" in df_br.columns else 0
+            total_valor = pd.to_numeric(df_disp["valorMercantil"], errors="coerce").sum() if "valorMercantil" in df_disp.columns else 0
             st.markdown(f"""<div class="kpi-card" style="border-left-color: #2980b9;"><div class="label">📦 Valor Mercantil</div><div class="value">R$ {total_valor:,.2f}</div></div>""", unsafe_allow_html=True)
         with bk3:
-            total_peso = pd.to_numeric(df_br["peso"], errors="coerce").sum() if "peso" in df_br.columns else 0
+            total_peso = pd.to_numeric(df_disp["peso"], errors="coerce").sum() if "peso" in df_disp.columns else 0
             st.markdown(f"""<div class="kpi-card" style="border-left-color: #27ae60;"><div class="label">⚖️ Peso Total</div><div class="value">{total_peso:,.0f} kg</div></div>""", unsafe_allow_html=True)
         with bk4:
-            total_volumes = pd.to_numeric(df_br["volumes"], errors="coerce").sum() if "volumes" in df_br.columns else 0
+            total_volumes = pd.to_numeric(df_disp["volumes"], errors="coerce").sum() if "volumes" in df_disp.columns else 0
             st.markdown(f"""<div class="kpi-card" style="border-left-color: #f39c12;"><div class="label">📊 Total Volumes</div><div class="value">{total_volumes:,.0f}</div></div>""", unsafe_allow_html=True)
 
         st.markdown("</div>", unsafe_allow_html=True)
@@ -1195,18 +1195,20 @@ with tab_gb:
         st.subheader("📊 Métricas GEBEX")
         gk1, gk2, gk3, gk4 = st.columns(4)
         with gk1:
-            st.markdown(f"""<div class="kpi-card" style="border-left-color: #27ae60;"><div class="label">📦 Total NFs</div><div class="value">{len(df_gb)}</div></div>""", unsafe_allow_html=True)
+            st.markdown(f"""<div class="kpi-card" style="border-left-color: #27ae60;"><div class="label">📦 Total NFs</div><div class="value">{len(df_gb_disp)}</div></div>""", unsafe_allow_html=True)
         with gk2:
-            st.markdown(f"""<div class="kpi-card" style="border-left-color: #2980b9;"><div class="label">🚛 Em Trânsito</div><div class="value">{gb_transito}</div></div>""", unsafe_allow_html=True)
+            gb_transito_disp = len(df_gb_disp[df_gb_disp["status"].isin(["EM TRANSITO", "TRÂNSITO"])]) if "status" in df_gb_disp.columns else 0
+            st.markdown(f"""<div class="kpi-card" style="border-left-color: #2980b9;"><div class="label">🚛 Em Trânsito</div><div class="value">{gb_transito_disp}</div></div>""", unsafe_allow_html=True)
         with gk3:
-            st.markdown(f"""<div class="kpi-card" style="border-left-color: #27ae60;"><div class="label">✅ Entregues</div><div class="value">{gb_entregues}</div></div>""", unsafe_allow_html=True)
-        pend_gb = len(df_gb) - gb_entregues - gb_transito
+            gb_entregues_disp = len(df_gb_disp[df_gb_disp["status"].isin(["ENTREGUE", "ENTREGA"])]) if "status" in df_gb_disp.columns else 0
+            st.markdown(f"""<div class="kpi-card" style="border-left-color: #27ae60;"><div class="label">✅ Entregues</div><div class="value">{gb_entregues_disp}</div></div>""", unsafe_allow_html=True)
+        pend_gb_disp = len(df_gb_disp) - gb_entregues_disp - gb_transito_disp
         with gk4:
-            st.markdown(f"""<div class="kpi-card" style="border-left-color: #f39c12;"><div class="label">⏳ Pendentes</div><div class="value">{pend_gb}</div></div>""", unsafe_allow_html=True)
+            st.markdown(f"""<div class="kpi-card" style="border-left-color: #f39c12;"><div class="label">⏳ Pendentes</div><div class="value">{pend_gb_disp}</div></div>""", unsafe_allow_html=True)
 
         # Status pie
-        if "status" in df_gb.columns:
-            sc_gb = df_gb["status"].value_counts()
+        if "status" in df_gb_disp.columns:
+            sc_gb = df_gb_disp["status"].value_counts()
             fig_gb = go.Figure(data=[go.Pie(labels=sc_gb.index, values=sc_gb.values, hole=0.55,
                 marker=dict(colors=px.colors.sequential.Blues[::-1][:len(sc_gb)]),
                 textinfo="label+percent", textposition="outside", showlegend=False)])
