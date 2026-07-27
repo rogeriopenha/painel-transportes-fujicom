@@ -572,7 +572,7 @@ with tab_geral:
         with sub1:
             busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_busca_cli")
         with sub2:
-            period_option = st.selectbox("Período", PERIOD_OPTIONS, key="periodo_cli", label_visibility="collapsed")
+            period_option = st.selectbox("Período", PERIOD_OPTIONS, index=3, key="periodo_cli", label_visibility="collapsed")
     with row2_c3:
         if st.button("🗑️ Limpar", key="btn_clear_filters", use_container_width=True):
             for k in ["nf_busca_geral", "cli_busca_geral", "status_filter_geral", "periodo_cli", "mes_fechado_geral"]:
@@ -1016,7 +1016,7 @@ with tab_br:
             with br_sub1:
                 br_busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_br_busca_cli")
             with br_sub2:
-                br_period_option = st.selectbox("Período", PERIOD_OPTIONS, key="br_periodo_cli", label_visibility="collapsed")
+                br_period_option = st.selectbox("Período", PERIOD_OPTIONS, index=3, key="br_periodo_cli", label_visibility="collapsed")
         with br_r2c3:
             if st.button("🗑️ Limpar", key="btn_br_clear", use_container_width=True):
                 for k in ["br_nf_busca", "br_cli_busca", "br_status_filter", "br_periodo_cli", "br_mes_fechado"]:
@@ -1169,7 +1169,7 @@ with tab_gb:
             with gb_sub1:
                 gb_busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_gb_busca_cli")
             with gb_sub2:
-                gb_period_option = st.selectbox("Período", PERIOD_OPTIONS, key="gb_periodo_cli", label_visibility="collapsed")
+                gb_period_option = st.selectbox("Período", PERIOD_OPTIONS, index=3, key="gb_periodo_cli", label_visibility="collapsed")
         with gb_r2c3:
             if st.button("🗑️ Limpar", key="btn_gb_clear", use_container_width=True):
                 for k in ["gb_nf_busca", "gb_cli_busca", "gb_status_filter", "gb_periodo_cli", "gb_mes_fechado"]:
