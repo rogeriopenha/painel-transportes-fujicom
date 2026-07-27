@@ -50,6 +50,10 @@ st.markdown("""
     section[data-testid="stSidebar"] .stTextInput input { background: #d9e4f4 !important; border-color: #b8c9dd !important; }
     section[data-testid="stSidebar"] [data-baseweb="select"] * { color: #000000 !important; }
     section[data-testid="stSidebar"] .stTextInput input { color: #000000 !important; }
+    div[data-baseweb="multi-select"] span { color: #ffffff !important; }
+    div[data-baseweb="tag"] span { color: #ffffff !important; }
+    div[data-baseweb="multi-select"] input::placeholder { color: #aabbcc !important; }
+    div[data-baseweb="multi-select"] div[role="listbox"] li { color: #1a1a2e !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -284,6 +288,24 @@ try:
 except Exception:
     df_br = pd.DataFrame()
 
+import json as _json_br_load
+br_timeline_map = {}
+try:
+    ws_br_tl = sheet.worksheet("BR-Timeline")
+    raw_br_tl = ws_br_tl.get_all_values()
+    if raw_br_tl and len(raw_br_tl) > 1:
+        for row_br_tl in raw_br_tl[1:]:
+            if row_br_tl and row_br_tl[0]:
+                try:
+                    br_timeline_map[row_br_tl[0]] = {
+                        "nf_numero": row_br_tl[1] if len(row_br_tl) > 1 else "",
+                        "timeline": _json_br_load.loads(row_br_tl[2]) if len(row_br_tl) > 2 and row_br_tl[2] else []
+                    }
+                except:
+                    pass
+except:
+    pass
+
 # ─── LOAD GEBEX DATA ───
 from ocorren_parser import processar_arquivo_ocorren, sync_ocorrencias_to_gsheet
 
@@ -484,7 +506,7 @@ with tab_geral:
         with col_cli_b:
             busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_busca_cli")
         with col_cli_periodo:
-            period_option = st.selectbox("Período", ["Últimos 30 dias", "Últimos 90 dias", "Últimos 6 meses", "Todo período"], key="periodo_cli")
+            period_option = st.selectbox("Período", ["Últimos 30 dias", "Últimos 90 dias", "Últimos 6 meses", "Todo período"], key="periodo_cli", label_visibility="collapsed")
     with sc3:
         st.markdown('<h3 style="color:#e8edf5;">📌 Filtrar por Status</h3>', unsafe_allow_html=True)
         all_statuses = []
@@ -699,6 +721,43 @@ with tab_geral:
                 st.plotly_chart(fig, use_container_width=True, key="chart_overview_carrier")
             st.markdown("</div>", unsafe_allow_html=True)
 
+    # --- Timeline da NF (Visão Geral) ---
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.subheader("⏳ Timeline da NF")
+    vg_tl_input = st.text_input("Digite a NF para ver o histórico", placeholder="Ex: 21070 ou 47696", key="vg_timeline_input")
+    if vg_tl_input:
+        vg_tl_clean = vg_tl_input.strip()
+        tl_found = False
+        tl_style = "background:#16233a; border-left:3px solid {cor}; padding:0.5rem 1rem; margin:0.3rem 0; border-radius:6px;"
+
+        br_tl_data = br_timeline_map.get(vg_tl_clean)
+        if not br_tl_data:
+            for num, info in br_timeline_map.items():
+                if info.get("nf_numero", "").lstrip("0") == vg_tl_clean.lstrip("0"):
+                    br_tl_data = info
+                    break
+        if br_tl_data and br_tl_data.get("timeline"):
+            tl_found = True
+            st.markdown("**🚛 Braspress:**")
+            for ev in br_tl_data["timeline"]:
+                desc = ev.get("descricao", ev.get("status", "?"))
+                dt = ev.get("data", ev.get("dataOcorrencia", ""))
+                cor = "#27ae60" if "entreg" in str(desc).lower() else "#2980b9"
+                st.markdown(f"""<div style="{tl_style.format(cor=cor)}"><strong>{dt}</strong> — {desc}</div>""", unsafe_allow_html=True)
+
+        gb_tl_filtradas = [o for o in gebex_ocorrencias_raw if o.get("numero_nf", "").lstrip("0") == vg_tl_clean.lstrip("0")]
+        if gb_tl_filtradas:
+            tl_found = True
+            gb_tl_filtradas.sort(key=lambda x: x.get("sequencial", "0"))
+            st.markdown("**📦 GEBEX:**")
+            for o in gb_tl_filtradas:
+                cor = "#27ae60" if o["codigo_ocorrencia"] in (1, 24, 104, 105) else "#2980b9"
+                st.markdown(f"""<div style="{tl_style.format(cor=cor)}"><strong>{o.get('data_ocorrencia', '')}</strong> — {o.get('descricao_ocorrencia', '')} <span style="color:#8899b8; font-size:0.8rem;">(cód. {o.get('codigo_ocorrencia', '')})</span></div>""", unsafe_allow_html=True)
+
+        if not tl_found:
+            st.info(f"NF {vg_tl_clean} não encontrada. Faça uma consulta primeiro (Braspress) ou faça upload do arquivo OCOREN (GEBEX).")
+    st.markdown("</div>", unsafe_allow_html=True)
+
 # ─── TAB: BRASPRESS ───
 with tab_br:
     from braspress_api import BraspressAPI, flatten_conhecimentos
@@ -824,6 +883,34 @@ with tab_br:
                     ws_br.append_rows(all_rows[i:i+100])
 
                 df_br = df_merged
+
+                import json as _json_br
+                try:
+                    ws_br_tl = sheet.worksheet("BR-Timeline")
+                except:
+                    ws_br_tl = sheet.add_worksheet(title="BR-Timeline", rows=100, cols=3)
+                    ws_br_tl.append_row(["numero", "nf_numero", "timeline_json"])
+                raw_tl = ws_br_tl.get_all_values()
+                tl_map = {}
+                if raw_tl and len(raw_tl) > 1:
+                    for row_tl in raw_tl[1:]:
+                        if row_tl and row_tl[0]:
+                            try:
+                                tl_map[row_tl[0]] = _json_br.loads(row_tl[2]) if len(row_tl) > 2 and row_tl[2] else []
+                            except:
+                                tl_map[row_tl[0]] = []
+                for t in todos:
+                    num = str(t.get("numero", ""))
+                    nf_num = str(t.get("nf_numero", ""))
+                    tl = t.get("timeline", [])
+                    if num and tl:
+                        tl_map[num] = {"nf_numero": nf_num, "timeline": tl}
+                tl_rows = [[k, v.get("nf_numero", ""), _json_br.dumps(v.get("timeline", []), ensure_ascii=False)] for k, v in tl_map.items()]
+                ws_br_tl.clear()
+                ws_br_tl.append_row(["numero", "nf_numero", "timeline_json"])
+                for i in range(0, len(tl_rows), 100):
+                    ws_br_tl.append_rows(tl_rows[i:i+100])
+
                 if not df_existing.empty:
                     st.success(f"✅ {len(todos)} consultados | {len(df_updated)} atualizados | {len(df_new_only)} novos | {len(df_merged)} total na planilha")
                 else:
@@ -836,32 +923,27 @@ with tab_br:
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("📋 Conhecimentos Braspress")
 
-        # Auto-filter when navigated from Visão Geral
         nf_detail = st.session_state.get("_nf_detail")
         auto_filter = st.session_state.get("_go_to_carrier", False) and nf_detail
 
-        # Filters
-        f1, f2, f3 = st.columns(3)
-        with f1:
-            status_opts = sorted(df_br["status"].dropna().unique()) if "status" in df_br.columns else []
-            status_sel = st.multiselect("Filtrar Status", status_opts, default=status_opts, key="br_status_filtro")
-        with f2:
-            if "cidade" in df_br.columns:
-                cidade_opts = sorted(df_br["cidade"].dropna().unique())
-                cidade_sel = st.multiselect("Cidade", cidade_opts, default=[], key="br_cidade_filtro")
-            else:
-                cidade_sel = []
-        with f3:
-            default_search = nf_detail if auto_filter else ""
-            search = st.text_input("🔎 Buscar", placeholder="NF, nº conhecimento...", key="br_search", value=default_search)
+        bf1, bf2, bf3 = st.columns([1, 1, 1])
+        with bf1:
+            default_nf = nf_detail if auto_filter else ""
+            br_nf_busca = st.text_input("🔎 Buscar NF / Conhecimento", placeholder="Ex: 21070", key="br_nf_busca", value=default_nf)
+        with bf2:
+            br_cli_busca = st.text_input("👥 Buscar Cliente", placeholder="Ex: COLSAN", key="br_cli_busca")
+        with bf3:
+            br_status_opts = sorted(df_br["status"].dropna().unique()) if "status" in df_br.columns else []
+            br_status_filter = st.multiselect("📌 Status", br_status_opts, default=br_status_opts, key="br_status_filter")
 
         df_disp = df_br.copy()
-        if status_sel:
-            df_disp = df_disp[df_disp["status"].isin(status_sel)]
-        if cidade_sel:
-            df_disp = df_disp[df_disp["cidade"].isin(cidade_sel)]
-        if search:
-            mask = df_disp.astype(str).apply(lambda row: row.str.contains(search, case=False, na=False)).any(axis=1)
+        if br_status_filter:
+            df_disp = df_disp[df_disp["status"].isin(br_status_filter)]
+        if br_nf_busca:
+            mask = df_disp.astype(str).apply(lambda row: row.str.contains(br_nf_busca, case=False, na=False)).any(axis=1)
+            df_disp = df_disp[mask]
+        if br_cli_busca:
+            mask = df_disp.astype(str).apply(lambda row: row.str.contains(br_cli_busca, case=False, na=False)).any(axis=1)
             df_disp = df_disp[mask]
 
         # Date formatting
@@ -880,6 +962,32 @@ with tab_br:
             df_show.to_excel(w, index=False, sheet_name="Braspress")
         e2.download_button("📥 Excel", output.getvalue(), f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
         e3.download_button("📥 JSON", df_show.to_json(orient="records", force_ascii=False, indent=2).encode("utf-8-sig"), f"braspress_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "application/json", use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown('<div class="card">', unsafe_allow_html=True)
+        st.subheader("⏳ Timeline da NF (Braspress)")
+        br_tl_input = st.text_input("Digite a NF ou nº conhecimento", placeholder="Ex: 21070", key="br_timeline_input")
+        if br_tl_input:
+            br_tl_clean = br_tl_input.strip()
+            tl_data = br_timeline_map.get(br_tl_clean)
+            if not tl_data:
+                for num, info in br_timeline_map.items():
+                    if info.get("nf_numero", "").lstrip("0") == br_tl_clean.lstrip("0"):
+                        tl_data = info
+                        break
+            if tl_data and tl_data.get("timeline"):
+                tl_events = tl_data["timeline"]
+                for ev in tl_events:
+                    desc = ev.get("descricao", ev.get("status", "?"))
+                    dt = ev.get("data", ev.get("dataOcorrencia", ""))
+                    cor = "#27ae60" if "entreg" in str(desc).lower() else "#2980b9"
+                    st.markdown(f"""
+                    <div style="background:#16233a; border-left:3px solid {cor}; padding:0.5rem 1rem; margin:0.3rem 0; border-radius:6px;">
+                        <strong>{dt}</strong> — {desc}
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info(f"NF {br_tl_clean} não encontrada no timeline. Faça uma consulta na API primeiro.")
         st.markdown("</div>", unsafe_allow_html=True)
 
         # KPIs Braspress
@@ -951,7 +1059,14 @@ with tab_gb:
 
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("📋 NFs Rastreadas")
-        search_gb = st.text_input("🔎 Buscar", placeholder="NF, status...", key="gb_search")
+        gf1, gf2, gf3 = st.columns([1, 1, 1])
+        with gf1:
+            gb_nf_busca = st.text_input("🔎 Buscar NF", placeholder="Ex: 47696", key="gb_nf_busca")
+        with gf2:
+            gb_cli_busca = st.text_input("👥 Buscar Cliente", placeholder="Ex: COLSAN", key="gb_cli_busca")
+        with gf3:
+            gb_status_opts = sorted(df_gb["status"].dropna().unique()) if "status" in df_gb.columns else []
+            gb_status_filter = st.multiselect("📌 Status", gb_status_opts, default=gb_status_opts, key="gb_status_filter")
         df_gb_disp = df_gb.copy()
         if "dataOcorrencia" in df_gb_disp.columns:
             df_gb_disp["dataOcorrencia"] = df_gb_disp["dataOcorrencia"].apply(
@@ -959,8 +1074,13 @@ with tab_gb:
         if "emissao" in df_gb_disp.columns:
             df_gb_disp["emissao"] = df_gb_disp["emissao"].apply(
                 lambda x: str(x)[:10] if pd.notna(x) else "")
-        if search_gb:
-            mask = df_gb_disp.astype(str).apply(lambda row: row.str.contains(search_gb, case=False, na=False)).any(axis=1)
+        if gb_status_filter:
+            df_gb_disp = df_gb_disp[df_gb_disp["status"].isin(gb_status_filter)]
+        if gb_nf_busca:
+            mask = df_gb_disp.astype(str).apply(lambda row: row.str.contains(gb_nf_busca, case=False, na=False)).any(axis=1)
+            df_gb_disp = df_gb_disp[mask]
+        if gb_cli_busca:
+            mask = df_gb_disp.astype(str).apply(lambda row: row.str.contains(gb_cli_busca, case=False, na=False)).any(axis=1)
             df_gb_disp = df_gb_disp[mask]
         st.dataframe(df_gb_disp, use_container_width=True, hide_index=True, height=350)
         st.caption(f"{len(df_gb_disp)} registros")

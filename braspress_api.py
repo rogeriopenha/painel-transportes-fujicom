@@ -89,6 +89,7 @@ def flatten_conhecimentos(data: dict) -> list[dict]:
         timeline = doc.get("timeLine", [])
         row["ultimo_status"] = timeline[-1].get("descricao") if timeline else doc.get("ultimaOcorrencia")
         row["ultimo_status_data"] = timeline[-1].get("data") if timeline else doc.get("dataOcorrencia")
+        row["timeline"] = timeline
 
         rows.append(row)
 
