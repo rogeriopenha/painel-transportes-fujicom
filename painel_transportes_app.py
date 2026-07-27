@@ -549,11 +549,11 @@ with tab_geral:
     st.markdown('<div class="card">', unsafe_allow_html=True)
     fc1, fc2, fc3, fc4 = st.columns(4)
     with fc1:
-        period_option = st.selectbox("Período", PERIOD_OPTIONS, index=3, key="periodo_cli", label_visibility="collapsed")
+        period_option = st.selectbox("Período", PERIOD_OPTIONS, index=3, key="periodo_cli")
     with fc2:
-        nf_busca = st.text_input("Nota Fiscal", placeholder="Ex: 21070", key="nf_busca_geral", label_visibility="collapsed")
+        nf_busca = st.text_input("Nota Fiscal", placeholder="Ex: 21070", key="nf_busca_geral")
     with fc3:
-        cli_busca = st.text_input("Cliente", placeholder="Ex: COLSAN", key="cli_busca_geral", label_visibility="collapsed")
+        cli_busca = st.text_input("Cliente", placeholder="Ex: COLSAN", key="cli_busca_geral")
     with fc4:
         all_statuses = []
         if not df_br.empty and "status" in df_br.columns:
@@ -561,7 +561,7 @@ with tab_geral:
         if not df_gb.empty and "status" in df_gb.columns:
             all_statuses.extend(df_gb["status"].dropna().unique().tolist())
         all_statuses = sorted(set(str(s) for s in all_statuses if s))
-        status_filter = st.multiselect("Status", all_statuses, key="status_filter_geral", label_visibility="collapsed", placeholder="Status...")
+        status_filter = st.multiselect("Status", all_statuses, key="status_filter_geral", placeholder="Status...")
 
     fb1, fb2, fb3, fb4 = st.columns(4)
     with fb1:
@@ -997,14 +997,14 @@ with tab_br:
 
         br_f1, br_f2, br_f3, br_f4 = st.columns(4)
         with br_f1:
-            br_period_option = st.selectbox("Período", PERIOD_OPTIONS, index=3, key="br_periodo_cli", label_visibility="collapsed")
+            br_period_option = st.selectbox("Período", PERIOD_OPTIONS, index=3, key="br_periodo_cli")
         with br_f2:
             br_nf_busca = st.text_input("Nota Fiscal", placeholder="Ex: 21070", key="br_nf_busca")
         with br_f3:
             br_cli_busca = st.text_input("Cliente", placeholder="Ex: COLSAN", key="br_cli_busca")
         with br_f4:
             br_status_opts = sorted(df_br["status"].dropna().unique()) if "status" in df_br.columns else []
-            br_status_filter = st.multiselect("Status", br_status_opts, default=br_status_opts, key="br_status_filter", label_visibility="collapsed", placeholder="Status...")
+            br_status_filter = st.multiselect("Status", br_status_opts, default=br_status_opts, key="br_status_filter", placeholder="Status...")
         br_b1, br_b2, br_b3, br_b4 = st.columns(4)
         with br_b1:
             br_mes_fechado = None
@@ -1148,14 +1148,14 @@ with tab_gb:
         st.subheader("📋 NFs Rastreadas")
         gb_f1, gb_f2, gb_f3, gb_f4 = st.columns(4)
         with gb_f1:
-            gb_period_option = st.selectbox("Período", PERIOD_OPTIONS, index=3, key="gb_periodo_cli", label_visibility="collapsed")
+            gb_period_option = st.selectbox("Período", PERIOD_OPTIONS, index=3, key="gb_periodo_cli")
         with gb_f2:
             gb_nf_busca = st.text_input("Nota Fiscal", placeholder="Ex: 47696", key="gb_nf_busca")
         with gb_f3:
             gb_cli_busca = st.text_input("Cliente", placeholder="Ex: COLSAN", key="gb_cli_busca")
         with gb_f4:
             gb_status_opts = sorted(df_gb["status"].dropna().unique()) if "status" in df_gb.columns else []
-            gb_status_filter = st.multiselect("Status", gb_status_opts, default=gb_status_opts, key="gb_status_filter", label_visibility="collapsed", placeholder="Status...")
+            gb_status_filter = st.multiselect("Status", gb_status_opts, default=gb_status_opts, key="gb_status_filter", placeholder="Status...")
         gb_b1, gb_b2, gb_b3, gb_b4 = st.columns(4)
         with gb_b1:
             gb_mes_fechado = None
