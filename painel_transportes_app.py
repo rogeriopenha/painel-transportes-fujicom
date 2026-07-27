@@ -456,15 +456,19 @@ def _load_raw_ocorrencias_from_sheet(sheet):
                     pass
     return all_ocorrs
 
-ws_gb = ensure_sheet(sheet, "GB-Ocorrencias",
-    ["nf_numero", "status", "ultima_ocorrencia", "data_ocorrencia",
-     "data_emissao", "codigo_ocorrencia", "sequencial", "transportadora",
-     "cnpj_emissor", "serie_nf"])
+try:
+    ws_gb = ensure_sheet(sheet, "GB-Ocorrencias",
+        ["nf_numero", "status", "ultima_ocorrencia", "data_ocorrencia",
+         "data_emissao", "codigo_ocorrencia", "sequencial", "transportadora",
+         "cnpj_emissor", "serie_nf"])
 
-df_gb = _load_df_gb_from_sheet(ws_gb)
-gebex_ocorrencias_raw = _load_raw_ocorrencias_from_sheet(sheet)
+    df_gb = _load_df_gb_from_sheet(ws_gb)
+    gebex_ocorrencias_raw = _load_raw_ocorrencias_from_sheet(sheet)
+except Exception as e:
+    st.warning(f"⚠️ Erro ao carregar GEBEX da planilha: {e}")
+    ws_gb = None
 
-if CLOUD_MODE and ocoren_content:
+if ws_gb and CLOUD_MODE and ocoren_content:
     try:
         from ocorren_parser import OcorrenParser, agregar_ocorrencias
         parser = OcorrenParser()
