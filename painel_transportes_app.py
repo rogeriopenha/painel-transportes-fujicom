@@ -515,14 +515,16 @@ with tab_geral:
         all_statuses = sorted(set(str(s) for s in all_statuses if s))
         status_filter = st.multiselect("Status", all_statuses, key="status_filter_geral", label_visibility="collapsed", placeholder="Selecione os status...")
 
-    col_nf_b, col_cli_b, col_periodo, col_limpar = st.columns([1, 1, 1, 1])
-    with col_nf_b:
+    row2_c1, row2_c2, row2_c3 = st.columns([1, 1, 1])
+    with row2_c1:
         busca_nf_click = st.button("Buscar NF", type="primary", use_container_width=True, key="btn_busca_nf")
-    with col_cli_b:
-        busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_busca_cli")
-    with col_periodo:
-        period_option = st.selectbox("Período", ["Últimos 30 dias", "Últimos 90 dias", "Últimos 6 meses", "Todo período"], key="periodo_cli", label_visibility="collapsed")
-    with col_limpar:
+    with row2_c2:
+        sub1, sub2 = st.columns([1, 1])
+        with sub1:
+            busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_busca_cli")
+        with sub2:
+            period_option = st.selectbox("Período", ["Últimos 30 dias", "Últimos 90 dias", "Últimos 6 meses", "Todo período"], key="periodo_cli", label_visibility="collapsed")
+    with row2_c3:
         if st.button("🗑️ Limpar", key="btn_clear_filters", use_container_width=True):
             for k in ["nf_busca_geral", "cli_busca_geral", "status_filter_geral", "periodo_cli"]:
                 if k in st.session_state:
