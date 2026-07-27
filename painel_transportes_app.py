@@ -498,28 +498,13 @@ tab_geral, tab_br, tab_gb, tab_params, tab_export = tabs
 with tab_geral:
     # --- Search Area ---
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    btn_col, sc1, sc2, sc3 = st.columns([0.5, 1, 1, 1])
-    with btn_col:
-        st.markdown('<h3 style="color:#e8edf5;">&nbsp;</h3>', unsafe_allow_html=True)
-        if st.button("🗑️ Limpar", key="btn_clear_filters", use_container_width=True):
-            for k in ["nf_busca_geral", "cli_busca_geral", "status_filter_geral", "periodo_cli"]:
-                if k in st.session_state:
-                    del st.session_state[k]
-            st.rerun()
+    sc1, sc2, sc3 = st.columns([1, 1, 1])
     with sc1:
         st.markdown('<h3 style="color:#e8edf5;">🔎 Buscar Nota Fiscal</h3>', unsafe_allow_html=True)
         nf_busca = st.text_input("Digite o número da NF", placeholder="Ex: 21070", key="nf_busca_geral", label_visibility="collapsed")
-        col_nf_b, col_nf_clean = st.columns([1, 1])
-        with col_nf_b:
-            busca_nf_click = st.button("Buscar NF", type="primary", use_container_width=True, key="btn_busca_nf")
     with sc2:
         st.markdown('<h3 style="color:#e8edf5;">👥 Buscar Cliente</h3>', unsafe_allow_html=True)
         cli_busca = st.text_input("Nome do cliente", placeholder="Ex: COLSAN", key="cli_busca_geral", label_visibility="collapsed")
-        col_cli_b, col_cli_periodo = st.columns([1, 1])
-        with col_cli_b:
-            busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_busca_cli")
-        with col_cli_periodo:
-            period_option = st.selectbox("Período", ["Últimos 30 dias", "Últimos 90 dias", "Últimos 6 meses", "Todo período"], key="periodo_cli", label_visibility="collapsed")
     with sc3:
         st.markdown('<h3 style="color:#e8edf5;">📌 Filtrar por Status</h3>', unsafe_allow_html=True)
         all_statuses = []
@@ -529,6 +514,20 @@ with tab_geral:
             all_statuses.extend(df_gb["status"].dropna().unique().tolist())
         all_statuses = sorted(set(str(s) for s in all_statuses if s))
         status_filter = st.multiselect("Status", all_statuses, key="status_filter_geral", label_visibility="collapsed", placeholder="Selecione os status...")
+
+    col_nf_b, col_cli_b, col_periodo, col_limpar = st.columns([1, 1, 1, 1])
+    with col_nf_b:
+        busca_nf_click = st.button("Buscar NF", type="primary", use_container_width=True, key="btn_busca_nf")
+    with col_cli_b:
+        busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_busca_cli")
+    with col_periodo:
+        period_option = st.selectbox("Período", ["Últimos 30 dias", "Últimos 90 dias", "Últimos 6 meses", "Todo período"], key="periodo_cli", label_visibility="collapsed")
+    with col_limpar:
+        if st.button("🗑️ Limpar", key="btn_clear_filters", use_container_width=True):
+            for k in ["nf_busca_geral", "cli_busca_geral", "status_filter_geral", "periodo_cli"]:
+                if k in st.session_state:
+                    del st.session_state[k]
+            st.rerun()
 
     # Build a unified dataset with carrier column
     def build_unified_data():
