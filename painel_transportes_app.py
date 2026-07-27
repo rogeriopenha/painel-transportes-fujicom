@@ -565,7 +565,14 @@ with tab_geral:
 
     fb1, fb2, fb3, fb4 = st.columns(4)
     with fb1:
-        st.markdown("")
+        mes_fechado_geral = None
+        if period_option == "Mês fechado":
+            _dates_geral = pd.concat([
+                pd.Series(df_br["emissao"].tolist() if "emissao" in df_br.columns else []),
+                pd.Series(df_gb["dataOcorrencia"].tolist() if "dataOcorrencia" in df_gb.columns else [])
+            ], ignore_index=True)
+            _months_geral = _get_available_months(_dates_geral)
+            mes_fechado_geral = st.selectbox("Mês", _months_geral, key="mes_fechado_geral", label_visibility="collapsed", placeholder="Selecione o mês")
     with fb2:
         busca_nf_click = st.button("Buscar NF", type="primary", use_container_width=True, key="btn_busca_nf")
     with fb3:
@@ -576,15 +583,6 @@ with tab_geral:
                 if k in st.session_state:
                     del st.session_state[k]
             st.rerun()
-
-    mes_fechado_geral = None
-    if period_option == "Mês fechado":
-        _dates_geral = pd.concat([
-            pd.Series(df_br["emissao"].tolist() if "emissao" in df_br.columns else []),
-            pd.Series(df_gb["dataOcorrencia"].tolist() if "dataOcorrencia" in df_gb.columns else [])
-        ], ignore_index=True)
-        _months_geral = _get_available_months(_dates_geral)
-        mes_fechado_geral = st.selectbox("Mês", _months_geral, key="mes_fechado_geral", label_visibility="collapsed", placeholder="Selecione o mês")
 
     # Build a unified dataset with carrier column
     def build_unified_data():
@@ -1009,7 +1007,10 @@ with tab_br:
             br_status_filter = st.multiselect("Status", br_status_opts, default=br_status_opts, key="br_status_filter", label_visibility="collapsed", placeholder="Status...")
         br_b1, br_b2, br_b3, br_b4 = st.columns(4)
         with br_b1:
-            st.markdown("")
+            br_mes_fechado = None
+            if br_period_option == "Mês fechado" and "emissao" in df_br.columns:
+                _months_br = _get_available_months(df_br["emissao"])
+                br_mes_fechado = st.selectbox("Mês", _months_br, key="br_mes_fechado", label_visibility="collapsed", placeholder="Selecione o mês")
         with br_b2:
             br_busca_nf_click = st.button("Buscar NF", type="primary", use_container_width=True, key="btn_br_busca_nf")
         with br_b3:
@@ -1020,11 +1021,6 @@ with tab_br:
                     if k in st.session_state:
                         del st.session_state[k]
                 st.rerun()
-
-        br_mes_fechado = None
-        if br_period_option == "Mês fechado" and "emissao" in df_br.columns:
-            _months_br = _get_available_months(df_br["emissao"])
-            br_mes_fechado = st.selectbox("Mês", _months_br, key="br_mes_fechado", label_visibility="collapsed", placeholder="Selecione o mês")
 
         df_disp = df_br.copy()
         if br_status_filter:
@@ -1162,7 +1158,10 @@ with tab_gb:
             gb_status_filter = st.multiselect("Status", gb_status_opts, default=gb_status_opts, key="gb_status_filter", label_visibility="collapsed", placeholder="Status...")
         gb_b1, gb_b2, gb_b3, gb_b4 = st.columns(4)
         with gb_b1:
-            st.markdown("")
+            gb_mes_fechado = None
+            if gb_period_option == "Mês fechado" and "dataOcorrencia" in df_gb.columns:
+                _months_gb = _get_available_months(df_gb["dataOcorrencia"])
+                gb_mes_fechado = st.selectbox("Mês", _months_gb, key="gb_mes_fechado", label_visibility="collapsed", placeholder="Selecione o mês")
         with gb_b2:
             gb_busca_nf_click = st.button("Buscar NF", type="primary", use_container_width=True, key="btn_gb_busca_nf")
         with gb_b3:
@@ -1173,10 +1172,6 @@ with tab_gb:
                     if k in st.session_state:
                         del st.session_state[k]
                 st.rerun()
-        gb_mes_fechado = None
-        if gb_period_option == "Mês fechado" and "dataOcorrencia" in df_gb.columns:
-            _months_gb = _get_available_months(df_gb["dataOcorrencia"])
-            gb_mes_fechado = st.selectbox("Mês", _months_gb, key="gb_mes_fechado", label_visibility="collapsed", placeholder="Selecione o mês")
         df_gb_disp = df_gb.copy()
         if gb_status_filter:
             df_gb_disp = df_gb_disp[df_gb_disp["status"].isin(gb_status_filter)]
