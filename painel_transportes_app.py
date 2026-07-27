@@ -54,10 +54,15 @@ st.markdown("""
     div[data-baseweb="tag"] span,
     div[data-baseweb="multi-select"] div[data-baseweb="input"] span { color: #ffffff !important; }
     div[data-baseweb="multi-select"] input::placeholder { color: #aabbcc !important; }
-    div[data-baseweb="select"] span[role="option"] { color: #1a1a2e !important; }
-    ul[role="listbox"] li span { color: #1a1a2e !important; }
-    div[data-baseweb="menu"] li { color: #1a1a2e !important; }
-    div[data-baseweb="menu"] li span { color: #1a1a2e !important; }
+    div[data-baseweb="menu"] { background: #1a2340 !important; border: 1px solid #3a4a6e !important; }
+    div[data-baseweb="menu"] li,
+    div[data-baseweb="menu"] li span,
+    ul[role="listbox"] li,
+    ul[role="listbox"] li span,
+    div[data-baseweb="select"] span[role="option"] { color: #ffffff !important; }
+    div[data-baseweb="menu"] li:hover,
+    div[data-baseweb="menu"] li[aria-selected="true"],
+    ul[role="listbox"] li:hover { background: #253e81 !important; }
     div[data-baseweb="multi-select"] div[aria-expanded="false"] span { color: #ffffff !important; }
     div[data-baseweb="multi-select"] div[aria-expanded="true"] span { color: #ffffff !important; }
 </style>
@@ -959,6 +964,13 @@ with tab_br:
         with bf3:
             br_status_opts = sorted(df_br["status"].dropna().unique()) if "status" in df_br.columns else []
             br_status_filter = st.multiselect("📌 Status", br_status_opts, default=br_status_opts, key="br_status_filter")
+        br_r2c1, br_r2c2, br_r2c3 = st.columns([1, 1, 1])
+        with br_r2c3:
+            if st.button("🗑️ Limpar", key="btn_br_clear", use_container_width=True):
+                for k in ["br_nf_busca", "br_cli_busca", "br_status_filter"]:
+                    if k in st.session_state:
+                        del st.session_state[k]
+                st.rerun()
 
         df_disp = df_br.copy()
         if br_status_filter:
@@ -1091,6 +1103,13 @@ with tab_gb:
         with gf3:
             gb_status_opts = sorted(df_gb["status"].dropna().unique()) if "status" in df_gb.columns else []
             gb_status_filter = st.multiselect("📌 Status", gb_status_opts, default=gb_status_opts, key="gb_status_filter")
+        gb_r2c1, gb_r2c2, gb_r2c3 = st.columns([1, 1, 1])
+        with gb_r2c3:
+            if st.button("🗑️ Limpar", key="btn_gb_clear", use_container_width=True):
+                for k in ["gb_nf_busca", "gb_cli_busca", "gb_status_filter"]:
+                    if k in st.session_state:
+                        del st.session_state[k]
+                st.rerun()
         df_gb_disp = df_gb.copy()
         if "dataOcorrencia" in df_gb_disp.columns:
             df_gb_disp["dataOcorrencia"] = df_gb_disp["dataOcorrencia"].apply(
