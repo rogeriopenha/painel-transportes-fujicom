@@ -87,9 +87,21 @@ def flatten_conhecimentos(data: dict) -> list[dict]:
         row["nf_emissao"] = nfs[0].get("emissao") if nfs else None
 
         timeline = doc.get("timeLine", [])
-        row["ultimo_status"] = timeline[-1].get("descricao") if timeline else doc.get("ultimaOcorrencia")
-        row["ultimo_status_data"] = timeline[-1].get("data") if timeline else doc.get("dataOcorrencia")
         row["timeline"] = timeline
+
+        status_atual = doc.get("status", "")
+        if status_atual and "finalizado" in status_atual.lower() and len(timeline) >= 2:
+            status_anterior = timeline[-2].get("descricao", "")
+            if status_anterior and "entreg" in status_anterior.lower():
+                row["status"] = "ENTREGA REALIZADA"
+            else:
+                row["status"] = status_anterior if status_anterior else status_atual
+            row["ultimo_status"] = timeline[-2].get("descricao", status_atual)
+            row["ultimo_status_data"] = timeline[-2].get("data", doc.get("dataOcorrencia"))
+        else:
+            row["status"] = status_atual
+            row["ultimo_status"] = timeline[-1].get("descricao") if timeline else doc.get("ultimaOcorrencia")
+            row["ultimo_status_data"] = timeline[-1].get("data") if timeline else doc.get("dataOcorrencia")
 
         rows.append(row)
 
