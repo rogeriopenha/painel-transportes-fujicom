@@ -547,33 +547,30 @@ tab_geral, tab_br, tab_gb, tab_params, tab_export = tabs
 with tab_geral:
     # --- Search Area ---
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    sc1, sc2, sc3 = st.columns([1, 1, 1])
-    with sc1:
-        st.markdown('<h3 style="color:#e8edf5;">🔎 Buscar Nota Fiscal</h3>', unsafe_allow_html=True)
-        nf_busca = st.text_input("Digite o número da NF", placeholder="Ex: 21070", key="nf_busca_geral", label_visibility="collapsed")
-    with sc2:
-        st.markdown('<h3 style="color:#e8edf5;">👥 Buscar Cliente</h3>', unsafe_allow_html=True)
-        cli_busca = st.text_input("Nome do cliente", placeholder="Ex: COLSAN", key="cli_busca_geral", label_visibility="collapsed")
-    with sc3:
-        st.markdown('<h3 style="color:#e8edf5;">📌 Filtrar por Status</h3>', unsafe_allow_html=True)
+    fc1, fc2, fc3, fc4 = st.columns(4)
+    with fc1:
+        period_option = st.selectbox("Período", PERIOD_OPTIONS, index=3, key="periodo_cli", label_visibility="collapsed")
+    with fc2:
+        nf_busca = st.text_input("Nota Fiscal", placeholder="Ex: 21070", key="nf_busca_geral", label_visibility="collapsed")
+    with fc3:
+        cli_busca = st.text_input("Cliente", placeholder="Ex: COLSAN", key="cli_busca_geral", label_visibility="collapsed")
+    with fc4:
         all_statuses = []
         if not df_br.empty and "status" in df_br.columns:
             all_statuses.extend(df_br["status"].dropna().unique().tolist())
         if not df_gb.empty and "status" in df_gb.columns:
             all_statuses.extend(df_gb["status"].dropna().unique().tolist())
         all_statuses = sorted(set(str(s) for s in all_statuses if s))
-        status_filter = st.multiselect("Status", all_statuses, key="status_filter_geral", label_visibility="collapsed", placeholder="Selecione os status...")
+        status_filter = st.multiselect("Status", all_statuses, key="status_filter_geral", label_visibility="collapsed", placeholder="Status...")
 
-    row2_c1, row2_c2, row2_c3 = st.columns([1, 1, 1])
-    with row2_c1:
+    fb1, fb2, fb3, fb4 = st.columns(4)
+    with fb1:
+        st.markdown("")
+    with fb2:
         busca_nf_click = st.button("Buscar NF", type="primary", use_container_width=True, key="btn_busca_nf")
-    with row2_c2:
-        sub1, sub2 = st.columns([1, 1])
-        with sub1:
-            busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_busca_cli")
-        with sub2:
-            period_option = st.selectbox("Período", PERIOD_OPTIONS, index=3, key="periodo_cli", label_visibility="collapsed")
-    with row2_c3:
+    with fb3:
+        busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_busca_cli")
+    with fb4:
         if st.button("🗑️ Limpar", key="btn_clear_filters", use_container_width=True):
             for k in ["nf_busca_geral", "cli_busca_geral", "status_filter_geral", "periodo_cli", "mes_fechado_geral"]:
                 if k in st.session_state:
@@ -1000,24 +997,24 @@ with tab_br:
         if auto_filter and nf_detail:
             st.session_state["br_nf_busca"] = nf_detail
 
-        bf1, bf2, bf3 = st.columns([1, 1, 1])
-        with bf1:
-            br_nf_busca = st.text_input("🔎 Buscar NF / Conhecimento", placeholder="Ex: 21070", key="br_nf_busca")
-        with bf2:
-            br_cli_busca = st.text_input("👥 Buscar Cliente", placeholder="Ex: COLSAN", key="br_cli_busca")
-        with bf3:
+        br_f1, br_f2, br_f3, br_f4 = st.columns(4)
+        with br_f1:
+            br_period_option = st.selectbox("Período", PERIOD_OPTIONS, index=3, key="br_periodo_cli", label_visibility="collapsed")
+        with br_f2:
+            br_nf_busca = st.text_input("Nota Fiscal", placeholder="Ex: 21070", key="br_nf_busca")
+        with br_f3:
+            br_cli_busca = st.text_input("Cliente", placeholder="Ex: COLSAN", key="br_cli_busca")
+        with br_f4:
             br_status_opts = sorted(df_br["status"].dropna().unique()) if "status" in df_br.columns else []
-            br_status_filter = st.multiselect("📌 Status", br_status_opts, default=br_status_opts, key="br_status_filter")
-        br_r2c1, br_r2c2, br_r2c3 = st.columns([1, 1, 1])
-        with br_r2c1:
+            br_status_filter = st.multiselect("Status", br_status_opts, default=br_status_opts, key="br_status_filter", label_visibility="collapsed", placeholder="Status...")
+        br_b1, br_b2, br_b3, br_b4 = st.columns(4)
+        with br_b1:
+            st.markdown("")
+        with br_b2:
             br_busca_nf_click = st.button("Buscar NF", type="primary", use_container_width=True, key="btn_br_busca_nf")
-        with br_r2c2:
-            br_sub1, br_sub2 = st.columns([1, 1])
-            with br_sub1:
-                br_busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_br_busca_cli")
-            with br_sub2:
-                br_period_option = st.selectbox("Período", PERIOD_OPTIONS, index=3, key="br_periodo_cli", label_visibility="collapsed")
-        with br_r2c3:
+        with br_b3:
+            br_busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_br_busca_cli")
+        with br_b4:
             if st.button("🗑️ Limpar", key="btn_br_clear", use_container_width=True):
                 for k in ["br_nf_busca", "br_cli_busca", "br_status_filter", "br_periodo_cli", "br_mes_fechado"]:
                     if k in st.session_state:
@@ -1153,24 +1150,24 @@ with tab_gb:
 
         st.markdown('<div class="card">', unsafe_allow_html=True)
         st.subheader("📋 NFs Rastreadas")
-        gf1, gf2, gf3 = st.columns([1, 1, 1])
-        with gf1:
-            gb_nf_busca = st.text_input("🔎 Buscar NF", placeholder="Ex: 47696", key="gb_nf_busca")
-        with gf2:
-            gb_cli_busca = st.text_input("👥 Buscar Cliente", placeholder="Ex: COLSAN", key="gb_cli_busca")
-        with gf3:
+        gb_f1, gb_f2, gb_f3, gb_f4 = st.columns(4)
+        with gb_f1:
+            gb_period_option = st.selectbox("Período", PERIOD_OPTIONS, index=3, key="gb_periodo_cli", label_visibility="collapsed")
+        with gb_f2:
+            gb_nf_busca = st.text_input("Nota Fiscal", placeholder="Ex: 47696", key="gb_nf_busca")
+        with gb_f3:
+            gb_cli_busca = st.text_input("Cliente", placeholder="Ex: COLSAN", key="gb_cli_busca")
+        with gb_f4:
             gb_status_opts = sorted(df_gb["status"].dropna().unique()) if "status" in df_gb.columns else []
-            gb_status_filter = st.multiselect("📌 Status", gb_status_opts, default=gb_status_opts, key="gb_status_filter")
-        gb_r2c1, gb_r2c2, gb_r2c3 = st.columns([1, 1, 1])
-        with gb_r2c1:
+            gb_status_filter = st.multiselect("Status", gb_status_opts, default=gb_status_opts, key="gb_status_filter", label_visibility="collapsed", placeholder="Status...")
+        gb_b1, gb_b2, gb_b3, gb_b4 = st.columns(4)
+        with gb_b1:
+            st.markdown("")
+        with gb_b2:
             gb_busca_nf_click = st.button("Buscar NF", type="primary", use_container_width=True, key="btn_gb_busca_nf")
-        with gb_r2c2:
-            gb_sub1, gb_sub2 = st.columns([1, 1])
-            with gb_sub1:
-                gb_busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_gb_busca_cli")
-            with gb_sub2:
-                gb_period_option = st.selectbox("Período", PERIOD_OPTIONS, index=3, key="gb_periodo_cli", label_visibility="collapsed")
-        with gb_r2c3:
+        with gb_b3:
+            gb_busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_gb_busca_cli")
+        with gb_b4:
             if st.button("🗑️ Limpar", key="btn_gb_clear", use_container_width=True):
                 for k in ["gb_nf_busca", "gb_cli_busca", "gb_status_filter", "gb_periodo_cli", "gb_mes_fechado"]:
                     if k in st.session_state:
