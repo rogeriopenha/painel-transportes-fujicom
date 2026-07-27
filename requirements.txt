@@ -8,6 +8,7 @@ oauth2client>=4.1
 requests>=2.31
 reportlab>=4.0
 pdfplumber>=0.11
+python-dateutil>=2.8
 
 # Instalar com:
 # pip install -r requirements.txt

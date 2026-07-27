@@ -4,11 +4,55 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 import json
 import io
 import os
 import base64
 from PIL import Image
+
+PERIOD_OPTIONS = ["Última semana", "Últimos 30 dias", "Mês fechado", "Todo período"]
+PT_MONTH_MAP = {
+    "jan": "01", "fev": "02", "mar": "03", "abr": "04", "mai": "05", "jun": "06",
+    "jul": "07", "ago": "08", "set": "09", "out": "10", "nov": "11", "dez": "12"
+}
+PT_MONTH_REVERSE = {v: k for k, v in PT_MONTH_MAP.items()}
+
+def _get_available_months(*date_series_list):
+    all_dates = pd.concat(date_series_list, ignore_index=True) if date_series_list else pd.Series()
+    dt = pd.to_datetime(all_dates, errors="coerce", dayfirst=True).dropna()
+    if dt.empty:
+        now = datetime.now()
+        return [f"{PT_MONTH_REVERSE.get(str(now.month).zfill(2), '')}-{now.year}"]
+    months = sorted(dt.dt.to_period("M").unique(), reverse=True)
+    result = []
+    for m in months:
+        mon_str = str(m.month).zfill(2)
+        pt_name = PT_MONTH_REVERSE.get(mon_str, mon_str)
+        result.append(f"{pt_name}-{m.year}")
+    return result
+
+def _apply_period_filter(df, period_option, date_col, mes_fechado_option=None):
+    if period_option == "Todo período" or not date_col or date_col not in df.columns:
+        return df
+    df = df.copy()
+    df["_pf_dt"] = pd.to_datetime(df[date_col], errors="coerce", dayfirst=True)
+    if period_option == "Última semana":
+        cutoff = datetime.now() - timedelta(days=7)
+        df = df[df["_pf_dt"] >= cutoff]
+    elif period_option == "Últimos 30 dias":
+        cutoff = datetime.now() - timedelta(days=30)
+        df = df[df["_pf_dt"] >= cutoff]
+    elif period_option == "Mês fechado" and mes_fechado_option:
+        parts = mes_fechado_option.split("-")
+        if len(parts) == 2:
+            pt_mon, yr = parts[0], parts[1]
+            mon_num = PT_MONTH_MAP.get(pt_mon, "01")
+            target_start = pd.Timestamp(f"{yr}-{mon_num}-01")
+            target_end = target_start + relativedelta(months=1)
+            df = df[(df["_pf_dt"] >= target_start) & (df["_pf_dt"] < target_end)]
+    df = df.drop(columns=["_pf_dt"], errors="ignore")
+    return df
 
 st.set_page_config(page_title="Painel Transportes - Fujicom", page_icon="🚚", layout="wide", initial_sidebar_state="expanded")
 
@@ -528,13 +572,22 @@ with tab_geral:
         with sub1:
             busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_busca_cli")
         with sub2:
-            period_option = st.selectbox("Período", ["Últimos 30 dias", "Últimos 90 dias", "Últimos 6 meses", "Todo período"], key="periodo_cli", label_visibility="collapsed")
+            period_option = st.selectbox("Período", PERIOD_OPTIONS, key="periodo_cli", label_visibility="collapsed")
     with row2_c3:
         if st.button("🗑️ Limpar", key="btn_clear_filters", use_container_width=True):
-            for k in ["nf_busca_geral", "cli_busca_geral", "status_filter_geral", "periodo_cli"]:
+            for k in ["nf_busca_geral", "cli_busca_geral", "status_filter_geral", "periodo_cli", "mes_fechado_geral"]:
                 if k in st.session_state:
                     del st.session_state[k]
             st.rerun()
+
+    mes_fechado_geral = None
+    if period_option == "Mês fechado":
+        _dates_geral = pd.concat([
+            pd.Series(df_br["emissao"].tolist() if "emissao" in df_br.columns else []),
+            pd.Series(df_gb["dataOcorrencia"].tolist() if "dataOcorrencia" in df_gb.columns else [])
+        ], ignore_index=True)
+        _months_geral = _get_available_months(_dates_geral)
+        mes_fechado_geral = st.selectbox("Mês", _months_geral, key="mes_fechado_geral", label_visibility="collapsed", placeholder="Selecione o mês")
 
     # Build a unified dataset with carrier column
     def build_unified_data():
@@ -623,22 +676,7 @@ with tab_geral:
         cli_results = df_unified[mask].copy()
 
         if not cli_results.empty:
-            # Apply period filter
-            if period_option == "Últimos 30 dias":
-                cutoff = datetime.now() - timedelta(days=30)
-                if "emissao" in cli_results.columns:
-                    cli_results["_dt"] = pd.to_datetime(cli_results["emissao"], errors="coerce", dayfirst=True)
-                    cli_results = cli_results[cli_results["_dt"] >= cutoff]
-            elif period_option == "Últimos 90 dias":
-                cutoff = datetime.now() - timedelta(days=90)
-                if "emissao" in cli_results.columns:
-                    cli_results["_dt"] = pd.to_datetime(cli_results["emissao"], errors="coerce", dayfirst=True)
-                    cli_results = cli_results[cli_results["_dt"] >= cutoff]
-            elif period_option == "Últimos 6 meses":
-                cutoff = datetime.now() - timedelta(days=180)
-                if "emissao" in cli_results.columns:
-                    cli_results["_dt"] = pd.to_datetime(cli_results["emissao"], errors="coerce", dayfirst=True)
-                    cli_results = cli_results[cli_results["_dt"] >= cutoff]
+            cli_results = _apply_period_filter(cli_results, period_option, "emissao", mes_fechado_geral)
 
             if not cli_results.empty:
                 st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -925,9 +963,13 @@ with tab_br:
                     for row_tl in raw_tl[1:]:
                         if row_tl and row_tl[0]:
                             try:
-                                tl_map[row_tl[0]] = _json_br.loads(row_tl[2]) if len(row_tl) > 2 and row_tl[2] else []
+                                data = _json_br.loads(row_tl[2]) if len(row_tl) > 2 and row_tl[2] else []
+                                if isinstance(data, list):
+                                    tl_map[row_tl[0]] = {"nf_numero": row_tl[1] if len(row_tl) > 1 else "", "timeline": data}
+                                else:
+                                    tl_map[row_tl[0]] = data
                             except:
-                                tl_map[row_tl[0]] = []
+                                tl_map[row_tl[0]] = {"nf_numero": row_tl[1] if len(row_tl) > 1 else "", "timeline": []}
                 for t in todos:
                     num = str(t.get("numero", ""))
                     nf_num = str(t.get("nf_numero", ""))
@@ -955,10 +997,12 @@ with tab_br:
         nf_detail = st.session_state.get("_nf_detail")
         auto_filter = st.session_state.get("_go_to_carrier", False) and nf_detail
 
+        if auto_filter and nf_detail:
+            st.session_state["br_nf_busca"] = nf_detail
+
         bf1, bf2, bf3 = st.columns([1, 1, 1])
         with bf1:
-            default_nf = nf_detail if auto_filter else ""
-            br_nf_busca = st.text_input("🔎 Buscar NF / Conhecimento", placeholder="Ex: 21070", key="br_nf_busca", value=default_nf)
+            br_nf_busca = st.text_input("🔎 Buscar NF / Conhecimento", placeholder="Ex: 21070", key="br_nf_busca")
         with bf2:
             br_cli_busca = st.text_input("👥 Buscar Cliente", placeholder="Ex: COLSAN", key="br_cli_busca")
         with bf3:
@@ -972,13 +1016,18 @@ with tab_br:
             with br_sub1:
                 br_busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_br_busca_cli")
             with br_sub2:
-                br_period_option = st.selectbox("Período", ["Últimos 30 dias", "Últimos 90 dias", "Últimos 6 meses", "Todo período"], key="br_periodo_cli", label_visibility="collapsed")
+                br_period_option = st.selectbox("Período", PERIOD_OPTIONS, key="br_periodo_cli", label_visibility="collapsed")
         with br_r2c3:
             if st.button("🗑️ Limpar", key="btn_br_clear", use_container_width=True):
-                for k in ["br_nf_busca", "br_cli_busca", "br_status_filter", "br_periodo_cli"]:
+                for k in ["br_nf_busca", "br_cli_busca", "br_status_filter", "br_periodo_cli", "br_mes_fechado"]:
                     if k in st.session_state:
                         del st.session_state[k]
                 st.rerun()
+
+        br_mes_fechado = None
+        if br_period_option == "Mês fechado" and "emissao" in df_br.columns:
+            _months_br = _get_available_months(df_br["emissao"])
+            br_mes_fechado = st.selectbox("Mês", _months_br, key="br_mes_fechado", label_visibility="collapsed", placeholder="Selecione o mês")
 
         df_disp = df_br.copy()
         if br_status_filter:
@@ -989,18 +1038,7 @@ with tab_br:
         if br_cli_busca:
             mask = df_disp.astype(str).apply(lambda row: row.str.contains(br_cli_busca, case=False, na=False)).any(axis=1)
             df_disp = df_disp[mask]
-        if br_period_option != "Todo período" and "emissao" in df_disp.columns:
-            if br_period_option == "Últimos 30 dias":
-                cutoff = datetime.now() - timedelta(days=30)
-            elif br_period_option == "Últimos 90 dias":
-                cutoff = datetime.now() - timedelta(days=90)
-            elif br_period_option == "Últimos 6 meses":
-                cutoff = datetime.now() - timedelta(days=180)
-            else:
-                cutoff = None
-            if cutoff:
-                df_disp["_dt"] = pd.to_datetime(df_disp["emissao"], errors="coerce", dayfirst=True)
-                df_disp = df_disp[df_disp["_dt"] >= cutoff]
+        df_disp = _apply_period_filter(df_disp, br_period_option, "emissao", br_mes_fechado)
 
         # Date formatting
         df_show = df_disp.copy()
@@ -1070,8 +1108,8 @@ with tab_br:
         with cc1:
             st.markdown('<div class="card">', unsafe_allow_html=True)
             st.subheader("Evolução por Status")
-            if "emissao" in df_br.columns and "status" in df_br.columns:
-                df_chart = df_br.copy()
+            if "emissao" in df_disp.columns and "status" in df_disp.columns:
+                df_chart = df_disp.copy()
                 df_chart["mes"] = df_chart["emissao"].dt.to_period("M").astype(str)
                 df_group = df_chart.groupby(["mes", "status"]).size().reset_index(name="count")
                 fig = px.bar(df_group, x="mes", y="count", color="status",
@@ -1086,8 +1124,8 @@ with tab_br:
         with cc2:
             st.markdown('<div class="card">', unsafe_allow_html=True)
             st.subheader("Top Destinatários")
-            if "destinatario" in df_br.columns:
-                dc = df_br["destinatario"].value_counts().head(10)
+            if "destinatario" in df_disp.columns:
+                dc = df_disp["destinatario"].value_counts().head(10)
                 fig = go.Figure(go.Bar(x=dc.values, y=dc.index, orientation="h",
                     marker=dict(color=dc.values, colorscale="Blues", line=dict(width=0)),
                     text=dc.values, textposition="outside"))
@@ -1131,13 +1169,17 @@ with tab_gb:
             with gb_sub1:
                 gb_busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_gb_busca_cli")
             with gb_sub2:
-                gb_period_option = st.selectbox("Período", ["Últimos 30 dias", "Últimos 90 dias", "Últimos 6 meses", "Todo período"], key="gb_periodo_cli", label_visibility="collapsed")
+                gb_period_option = st.selectbox("Período", PERIOD_OPTIONS, key="gb_periodo_cli", label_visibility="collapsed")
         with gb_r2c3:
             if st.button("🗑️ Limpar", key="btn_gb_clear", use_container_width=True):
-                for k in ["gb_nf_busca", "gb_cli_busca", "gb_status_filter", "gb_periodo_cli"]:
+                for k in ["gb_nf_busca", "gb_cli_busca", "gb_status_filter", "gb_periodo_cli", "gb_mes_fechado"]:
                     if k in st.session_state:
                         del st.session_state[k]
                 st.rerun()
+        gb_mes_fechado = None
+        if gb_period_option == "Mês fechado" and "dataOcorrencia" in df_gb.columns:
+            _months_gb = _get_available_months(df_gb["dataOcorrencia"])
+            gb_mes_fechado = st.selectbox("Mês", _months_gb, key="gb_mes_fechado", label_visibility="collapsed", placeholder="Selecione o mês")
         df_gb_disp = df_gb.copy()
         if gb_status_filter:
             df_gb_disp = df_gb_disp[df_gb_disp["status"].isin(gb_status_filter)]
@@ -1147,18 +1189,7 @@ with tab_gb:
         if gb_cli_busca:
             mask = df_gb_disp.astype(str).apply(lambda row: row.str.contains(gb_cli_busca, case=False, na=False)).any(axis=1)
             df_gb_disp = df_gb_disp[mask]
-        if gb_period_option != "Todo período" and "dataOcorrencia" in df_gb_disp.columns:
-            if gb_period_option == "Últimos 30 dias":
-                cutoff = datetime.now() - timedelta(days=30)
-            elif gb_period_option == "Últimos 90 dias":
-                cutoff = datetime.now() - timedelta(days=90)
-            elif gb_period_option == "Últimos 6 meses":
-                cutoff = datetime.now() - timedelta(days=180)
-            else:
-                cutoff = None
-            if cutoff:
-                df_gb_disp["_dt"] = pd.to_datetime(df_gb_disp["dataOcorrencia"], errors="coerce", dayfirst=True)
-                df_gb_disp = df_gb_disp[df_gb_disp["_dt"] >= cutoff]
+        df_gb_disp = _apply_period_filter(df_gb_disp, gb_period_option, "dataOcorrencia", gb_mes_fechado)
         if "dataOcorrencia" in df_gb_disp.columns:
             df_gb_disp["dataOcorrencia"] = df_gb_disp["dataOcorrencia"].apply(
                 lambda x: str(x)[:10] if pd.notna(x) else "")
