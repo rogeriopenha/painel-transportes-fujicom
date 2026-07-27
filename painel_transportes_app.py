@@ -110,6 +110,7 @@ st.markdown("""
     div[data-baseweb="multi-select"] div[aria-expanded="false"] span { color: #ffffff !important; }
     div[data-baseweb="multi-select"] div[aria-expanded="true"] span { color: #ffffff !important; }
     [data-testid="stWidgetLabel"] { font-size: 1.125rem !important; font-weight: 700 !important; color: #e8edf5 !important; }
+    label[for] { font-size: 1.125rem !important; font-weight: 700 !important; color: #e8edf5 !important; }
 </style>
 """, unsafe_allow_html=True)
 
