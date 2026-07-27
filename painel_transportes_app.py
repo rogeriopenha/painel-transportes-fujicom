@@ -470,7 +470,7 @@ tab_geral, tab_br, tab_gb, tab_params, tab_export = tabs
 with tab_geral:
     # --- Search Area ---
     st.markdown('<div class="card">', unsafe_allow_html=True)
-    sc1, sc2 = st.columns([1, 1])
+    sc1, sc2, sc3 = st.columns([1, 1, 1])
     with sc1:
         st.markdown('<h3 style="color:#e8edf5;">🔎 Buscar Nota Fiscal</h3>', unsafe_allow_html=True)
         nf_busca = st.text_input("Digite o número da NF", placeholder="Ex: 21070", key="nf_busca_geral", label_visibility="collapsed")
@@ -485,6 +485,15 @@ with tab_geral:
             busca_cli_click = st.button("Buscar Cliente", type="primary", use_container_width=True, key="btn_busca_cli")
         with col_cli_periodo:
             period_option = st.selectbox("Período", ["Últimos 30 dias", "Últimos 90 dias", "Últimos 6 meses", "Todo período"], key="periodo_cli")
+    with sc3:
+        st.markdown('<h3 style="color:#e8edf5;">📌 Filtrar por Status</h3>', unsafe_allow_html=True)
+        all_statuses = []
+        if not df_br.empty and "status" in df_br.columns:
+            all_statuses.extend(df_br["status"].dropna().unique().tolist())
+        if not df_gb.empty and "status" in df_gb.columns:
+            all_statuses.extend(df_gb["status"].dropna().unique().tolist())
+        all_statuses = sorted(set(str(s) for s in all_statuses if s))
+        status_filter = st.multiselect("Status", all_statuses, key="status_filter_geral", label_visibility="collapsed", placeholder="Selecione os status...")
 
     # Build a unified dataset with carrier column
     def build_unified_data():
@@ -506,6 +515,8 @@ with tab_geral:
         return pd.DataFrame(rows)
 
     df_unified = build_unified_data()
+    if status_filter and not df_unified.empty and "status" in df_unified.columns:
+        df_unified = df_unified[df_unified["status"].isin(status_filter)]
     st.markdown("</div>", unsafe_allow_html=True)
 
     # --- NF Panorama ---
